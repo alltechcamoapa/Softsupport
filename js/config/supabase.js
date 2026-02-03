@@ -43,13 +43,28 @@ const getSupabaseClient = () => {
 
 /**
  * Verifica si el usuario está autenticado
+ * @returns {Promise<boolean>} true si hay sesión activa
  */
 const isAuthenticated = async () => {
-    const client = getSupabaseClient();
-    if (!client) return false;
+    try {
+        const client = getSupabaseClient();
+        if (!client) {
+            console.warn('⚠️ Supabase client no disponible');
+            return false;
+        }
 
-    const { data: { session } } = await client.auth.getSession();
-    return !!session;
+        const { data: { session }, error } = await client.auth.getSession();
+
+        if (error) {
+            console.error('❌ Error verificando sesión:', error.message);
+            return false;
+        }
+
+        return !!session;
+    } catch (error) {
+        console.error('❌ Error en isAuthenticated:', error);
+        return false;
+    }
 };
 
 /**

@@ -106,18 +106,18 @@
         --device-type: 'smartphone';
 
         /* Larger touch targets for phones */
-        --icon-size-sm: 20px;
-        --icon-size-md: 24px;
-        --icon-size-lg: 32px;
-        --icon-size-xl: 40px;
+        --icon-size-sm: 18px;
+        --icon-size-md: 22px;
+        --icon-size-lg: 28px;
+        --icon-size-xl: 36px;
 
         --touch-target-min: 44px;
     }
 
-    /* Increase base font size for mobile */
+    /* Keep standard base font size for mobile - touch targets are what matter */
     html {
-        font-size: 18px;
-        /* Base 16px -> 18px */
+        font-size: 16px;
+        /* Keep standard - previous 18px was too large */
     }
 
     /* ===== HEADER OPTIMIZATIONS ===== */
@@ -543,9 +543,10 @@
         --device-type: 'smartphone-small';
     }
 
-    /* Even larger base font for very small screens */
+    /* Keep standard font size - don't increase for small screens */
     html {
-        font-size: 19px;
+        font-size: 16px;
+        /* Keep standard - larger sizes cause UI overflow */
     }
 
     /* Compact header on very small screens */

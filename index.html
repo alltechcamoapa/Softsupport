@@ -145,22 +145,47 @@
   <script>
     // Initialize with session sync
     document.addEventListener('DOMContentLoaded', async () => {
-      // IMPORTANT: State.init() MUST run first to load localStorage data
-      State.init();
+      console.log('🚀 ALLTECH SUPPORT - Iniciando...');
 
-      // Now sync can correctly verify state vs Supabase session
-      await SessionSync.checkAndSync();
+      try {
+        // IMPORTANT: State.init() MUST run first to load localStorage data
+        State.init();
 
-      // Initialize the app (State.init is idempotent, so it's safe to call again)
-      App.init();
+        // Now sync can correctly verify state vs Supabase session
+        await SessionSync.checkAndSync();
+
+        // Initialize the app (State.init is idempotent, so it's safe to call again)
+        App.init();
+
+        console.log('✅ ALLTECH SUPPORT - Inicialización completa');
+      } catch (error) {
+        console.error('❌ Error crítico en inicialización:', error);
+        // Even on error, try to render something
+        if (typeof App !== 'undefined' && App.render) {
+          State.logout();
+          App.render();
+        }
+      }
     });
 
-    // Hide loading screen
+    // Hide loading screen - always hide after timeout even if there's an issue
     window.addEventListener('load', () => {
       setTimeout(() => {
-        document.getElementById('loadingScreen').classList.add('hidden');
-      }, 300);
+        const loader = document.getElementById('loadingScreen');
+        if (loader) {
+          loader.classList.add('hidden');
+        }
+      }, 500);
     });
+
+    // Fallback: hide loading screen after 5 seconds no matter what
+    setTimeout(() => {
+      const loader = document.getElementById('loadingScreen');
+      if (loader && !loader.classList.contains('hidden')) {
+        console.warn('⚠️ Forzando ocultar loading screen por timeout');
+        loader.classList.add('hidden');
+      }
+    }, 5000);
   </script>
 </body>
 
