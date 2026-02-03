@@ -757,8 +757,117 @@ Firma: ____________________`,
         return Object.keys(permissions[roles[0]]);
     };
 
+    // ========== REALTIME SYNC UTILS ==========
+    const toCamelCase = (str) => {
+        return str.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
+    };
+
+    const normalizeSupabaseData = (table, data) => {
+        const normalized = {};
+        for (const key in data) {
+            normalized[toCamelCase(key)] = data[key];
+        }
+
+        // Mapeos específicos de IDs para mantener compatibilidad con la app
+        if (table === 'clientes' && normalized.codigoCliente) normalized.clienteId = normalized.codigoCliente;
+        if (table === 'contratos' && normalized.codigoContrato) normalized.contratoId = normalized.codigoContrato;
+        if (table === 'equipos' && normalized.codigoEquipo) normalized.equipoId = normalized.codigoEquipo;
+
+        return normalized;
+    };
+
+    const handleRealtimeUpdate = (payload) => {
+        try {
+            const { table, eventType, new: newRecord, old: oldRecord } = payload;
+            console.log(`🔄 DataService: Procesando update en ${table} (${eventType})`);
+
+            let targetArray = null;
+            let idField = null;
+
+            // Determinar array objetivo y campo ID
+            switch (table) {
+                case 'clientes':
+                    targetArray = mockClientes;
+                    idField = 'clienteId';
+                    break;
+                case 'contratos':
+                    targetArray = mockContratos;
+                    idField = 'contratoId';
+                    break;
+                case 'equipos':
+                    targetArray = mockEquipos;
+                    idField = 'equipoId';
+                    break;
+                case 'visitas':
+                    targetArray = mockVisitas;
+                    idField = 'visitaId';
+                    break;
+                case 'proformas':
+                    targetArray = mockProformas;
+                    idField = 'proformaId';
+                    break;
+                default:
+                    return; // Tabla no manejada o irrelevante
+            }
+
+            if (!targetArray) return;
+
+            // Procesar el cambio
+            if (eventType === 'INSERT') {
+                const item = normalizeSupabaseData(table, newRecord);
+                // Evitar duplicados
+                if (!targetArray.find(i => i[idField] === item[idField])) {
+                    targetArray.unshift(item);
+                }
+            } else if (eventType === 'UPDATE') {
+                const item = normalizeSupabaseData(table, newRecord);
+                const idx = targetArray.findIndex(i => i[idField] === item[idField]);
+                if (idx !== -1) {
+                    targetArray[idx] = { ...targetArray[idx], ...item };
+                }
+            } else if (eventType === 'DELETE') {
+                // DELETE payload sometimes only has ID
+                // Necesitamos saber qué campo mapea al ID en la DB (id?)
+                // Supabase envía el old record con Pks.
+                // Asumimos que idField de la App se mapea via normalizeSupabaseData del Old record
+
+                // Hack: Si tenemos el codigo_X en oldRecord, genial. Si no, quizas solo tenemos 'id' interno de supabase.
+                // Nuestra App usa IDs string custom (CLI001).
+                // Si la DB tiene `codigo_cliente`, deberíamos recibirlo en old si es replica identity full.
+                // Si no, esto podría fallar si no tenemos el mapping.
+                // Por seguridad, intentamos buscar por ID interno si existe en nuestros datos (si guardamos 'id' de supabase)
+                // O recargamos.
+
+                // Simplemente re-fetch del modulo podría ser más seguro para delete.
+
+                if (oldRecord) {
+                    const item = normalizeSupabaseData(table, oldRecord);
+                    const idx = targetArray.findIndex(i => i[idField] === item[idField]);
+                    if (idx !== -1) {
+                        targetArray.splice(idx, 1);
+                    }
+                }
+            }
+
+            saveToStorage();
+
+            // Notificar a la App para refrescar vista
+            if (typeof App !== 'undefined' && App.refreshCurrentModule) {
+                // Solo refrescar si estamos en el módulo correspondiente
+                const currentModule = State.get('currentModule');
+                if (currentModule === table) {
+                    App.refreshCurrentModule();
+                }
+            }
+
+        } catch (error) {
+            console.error('❌ Error handling realtime update:', error);
+        }
+    };
+
     // ========== PUBLIC API ==========
     return {
+        handleRealtimeUpdate, // Expuesto para App.js
         // Dashboard
         getDashboardStats, getRecentActivities, getChartData, getSavingsPlans, getBankAccounts,
         // Auth

@@ -860,6 +860,25 @@ const App = (() => {
     // Initial render
     render();
 
+    // Initialize Realtime Sync
+    if (typeof SupabaseDataService !== 'undefined' && typeof DataService !== 'undefined') {
+      // Wait for potential session restore
+      setTimeout(() => {
+        if (State.isLoggedIn()) {
+          console.log('🔌 App: Iniciando sincronización Realtime...');
+          SupabaseDataService.subscribeToChanges((payload) => {
+            if (DataService.handleRealtimeUpdate) {
+              DataService.handleRealtimeUpdate(payload);
+              // Optional: Show toast for significant events
+              if (payload.eventType === 'INSERT' || payload.eventType === 'DELETE') {
+                showNotification(`Actualización: ${payload.table}`, 'info');
+              }
+            }
+          });
+        }
+      }, 1000);
+    }
+
     // Handle window resize for chart
     let resizeTimeout;
     window.addEventListener('resize', () => {

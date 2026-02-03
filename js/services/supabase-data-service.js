@@ -469,10 +469,32 @@ const SupabaseDataService = (() => {
         return await getCurrentProfile();
     };
 
+    // ========== REALTIME SUBSCRIPCIONES ==========
+
+    const subscribeToChanges = (callback) => {
+        if (!client) return null;
+
+        console.log('🔌 Iniciando suscripción a Realtime...');
+
+        // Suscribirse a cambios en todas las tablas relevantes
+        const subscription = client
+            .channel('db-changes')
+            .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
+                console.log('🔔 Cambio detectado en DB:', payload);
+                if (callback) callback(payload);
+            })
+            .subscribe((status) => {
+                console.log('📡 Estado de suscripción:', status);
+            });
+
+        return subscription;
+    };
+
     // ========== PUBLIC API ==========
     return {
         // Inicialización
         init,
+        subscribeToChanges, // Exportar función
 
         // Auth
         authenticateUser,
