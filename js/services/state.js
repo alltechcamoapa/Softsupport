@@ -5,6 +5,7 @@
 
 const State = (() => {
     const STORAGE_KEY = 'alltech_support_state';
+    let isInitialized = false;
 
     // Initial state structure
     const initialState = {
@@ -32,6 +33,7 @@ const State = (() => {
                 const parsed = JSON.parse(saved);
                 // Merge con initial state
                 state = { ...initialState, ...parsed };
+                console.log('✅ State cargado desde localStorage:', { isAuthenticated: state.isAuthenticated, user: state.user?.name });
             }
         } catch (error) {
             console.warn('Failed to load state from storage:', error);
@@ -176,10 +178,17 @@ const State = (() => {
     // ========== INITIALIZATION ==========
 
     const init = () => {
+        // Prevent double initialization
+        if (isInitialized) {
+            console.log('ℹ️ State ya inicializado, omitiendo...');
+            return;
+        }
+
         loadFromStorage();
         // Apply saved theme
         document.documentElement.setAttribute('data-theme', state.theme);
-        console.log('✅ State inicializado:', { isAuthenticated: state.isAuthenticated, user: state.user });
+        isInitialized = true;
+        console.log('✅ State inicializado:', { isAuthenticated: state.isAuthenticated, user: state.user?.name || 'N/A' });
     };
 
     // ========== PUBLIC API ==========

@@ -145,7 +145,13 @@
   <script>
     // Initialize with session sync
     document.addEventListener('DOMContentLoaded', async () => {
+      // IMPORTANT: State.init() MUST run first to load localStorage data
+      State.init();
+
+      // Now sync can correctly verify state vs Supabase session
       await SessionSync.checkAndSync();
+
+      // Initialize the app (State.init is idempotent, so it's safe to call again)
       App.init();
     });
 
