@@ -104,11 +104,11 @@
 
   <!-- Services -->
   <script src="js/services/state.js"></script>
-  
+
   <!-- Supabase Configuration & Service -->
   <script src="js/config/supabase.js"></script>
   <script src="js/services/supabase-data-service.js"></script>
-  
+
   <!-- Legacy Services (fallback) -->
   <script src="js/services/data-service.js"></script>
   <script src="js/services/log-service.js"></script>
@@ -132,11 +132,20 @@
   <script src="js/modules/report-editor.js"></script>
   <script src="js/welcome-module.js"></script>
 
+
+  <!-- Session Sync -->
+  <script src="js/services/session-sync.js"></script>
   <!-- Main App -->
   <script src="js/app.js"></script>
 
   <script>
-    // Hide loading screen when app is ready
+    // Initialize with session sync
+    document.addEventListener('DOMContentLoaded', async () => {
+      await SessionSync.checkAndSync();
+      App.init();
+    });
+
+    // Hide loading screen
     window.addEventListener('load', () => {
       setTimeout(() => {
         document.getElementById('loadingScreen').classList.add('hidden');

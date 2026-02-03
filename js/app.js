@@ -957,5 +957,3 @@ const App = (() => {
   };
 })();
 
-// Initialize on DOM ready
-document.addEventListener('DOMContentLoaded', App.init);
