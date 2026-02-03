@@ -1,0 +1,748 @@
+/**
+ * ============================================
+ * ALLTECH SUPPORT - Responsive Optimization
+ * Smart device detection and adaptive UI
+ * ============================================
+ */
+
+/* ========== DEVICE DETECTION & BASE ADJUSTMENTS ========== */
+
+/* Desktop (Default) - 1280px+ */
+:root {
+    --icon-size-sm: 16px;
+    --icon-size-md: 20px;
+    --icon-size-lg: 24px;
+    --icon-size-xl: 32px;
+
+    --touch-target-min: 44px;
+    /* Apple HIG minimum */
+    --device-type: 'desktop';
+}
+
+/* ========== TABLET OPTIMIZATIONS (768px - 1279px) ========== */
+@media (min-width: 768px) and (max-width: 1279px) {
+    :root {
+        --device-type: 'tablet';
+
+        /* Slightly larger touch targets for tablets */
+        --icon-size-sm: 18px;
+        --icon-size-md: 22px;
+        --icon-size-lg: 28px;
+        --icon-size-xl: 36px;
+
+        --touch-target-min: 48px;
+    }
+
+    /* Increase font sizes for readability */
+    html {
+        font-size: 17px;
+        /* Base 16px -> 17px */
+    }
+
+    /* Larger sidebar icons */
+    .sidebar__menu-icon {
+        width: 24px !important;
+        height: 24px !important;
+    }
+
+    /* Larger header elements */
+    .header__title {
+        font-size: var(--font-size-xl);
+    }
+
+    .header__action-btn {
+        width: 48px;
+        height: 48px;
+    }
+
+    /* Bigger buttons for touch */
+    .btn {
+        min-height: 48px;
+        padding: var(--spacing-md) var(--spacing-lg);
+        font-size: var(--font-size-md);
+    }
+
+    .btn--sm {
+        min-height: 42px;
+        padding: var(--spacing-sm) var(--spacing-md);
+        font-size: var(--font-size-sm);
+    }
+
+    .btn--icon {
+        width: 48px;
+        height: 48px;
+    }
+
+    /* Table touch-friendly */
+    .data-table th,
+    .data-table td {
+        padding: var(--spacing-md) var(--spacing-lg);
+        font-size: var(--font-size-md);
+    }
+
+    /* Larger form controls */
+    input,
+    textarea,
+    select {
+        min-height: 48px;
+        padding: var(--spacing-md);
+        font-size: var(--font-size-md);
+    }
+
+    /* Stats cards more readable */
+    .stat-card__value {
+        font-size: 2.5rem !important;
+    }
+
+    .stat-card__icon {
+        width: 56px !important;
+        height: 56px !important;
+    }
+}
+
+/* ========== SMARTPHONE OPTIMIZATIONS (< 768px) ========== */
+@media (max-width: 767px) {
+    :root {
+        --device-type: 'smartphone';
+
+        /* Larger touch targets for phones */
+        --icon-size-sm: 20px;
+        --icon-size-md: 24px;
+        --icon-size-lg: 32px;
+        --icon-size-xl: 40px;
+
+        --touch-target-min: 44px;
+    }
+
+    /* Increase base font size for mobile */
+    html {
+        font-size: 18px;
+        /* Base 16px -> 18px */
+    }
+
+    /* ===== HEADER OPTIMIZATIONS ===== */
+    .header {
+        height: 64px;
+        /* Taller header */
+        padding: 0 var(--spacing-sm);
+    }
+
+    .header__title {
+        font-size: var(--font-size-lg);
+        font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .header__menu-btn {
+        width: 44px;
+        height: 44px;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        margin-right: var(--spacing-sm);
+    }
+
+    .header__menu-btn svg {
+        width: 24px;
+        height: 24px;
+    }
+
+    .header__action-btn {
+        width: 44px;
+        height: 44px;
+    }
+
+    .header__action-btn svg {
+        width: 22px;
+        height: 22px;
+    }
+
+    .header__avatar {
+        width: 40px;
+        height: 40px;
+    }
+
+    .header__avatar-btn {
+        padding: 0;
+        width: 44px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* ===== SIDEBAR OPTIMIZATIONS ===== */
+    .sidebar {
+        width: 280px;
+        /* Wider on mobile for easier touch */
+    }
+
+    .sidebar__menu-link {
+        padding: var(--spacing-md) var(--spacing-lg);
+        font-size: var(--font-size-md);
+        min-height: 52px;
+    }
+
+    .sidebar__menu-icon {
+        width: 26px !important;
+        height: 26px !important;
+    }
+
+    .sidebar__user {
+        padding: var(--spacing-lg);
+    }
+
+    .sidebar__user-avatar {
+        width: 48px;
+        height: 48px;
+    }
+
+    .sidebar__user-name {
+        font-size: var(--font-size-md);
+    }
+
+    /* ===== CONTENT OPTIMIZATIONS ===== */
+    .content {
+        padding: var(--spacing-md);
+    }
+
+    /* Larger module titles */
+    .module-title {
+        font-size: var(--font-size-xl);
+    }
+
+    .module-subtitle {
+        font-size: var(--font-size-md);
+    }
+
+    /* ===== BUTTON OPTIMIZATIONS ===== */
+    .btn {
+        min-height: 50px;
+        padding: var(--spacing-md) var(--spacing-xl);
+        font-size: var(--font-size-md);
+        font-weight: 600;
+        border-radius: var(--border-radius-lg);
+    }
+
+    .btn--sm {
+        min-height: 44px;
+        padding: var(--spacing-sm) var(--spacing-lg);
+        font-size: var(--font-size-sm);
+    }
+
+    .btn--lg {
+        min-height: 56px;
+        padding: var(--spacing-lg) var(--spacing-2xl);
+        font-size: var(--font-size-lg);
+    }
+
+    .btn--icon {
+        width: 50px;
+        height: 50px;
+    }
+
+    .btn--icon svg {
+        width: 24px;
+        height: 24px;
+    }
+
+    /* Button text on mobile should be clearer */
+    .btn--ghost {
+        background: var(--bg-tertiary);
+    }
+
+    /* ===== FORM OPTIMIZATIONS ===== */
+    input,
+    textarea,
+    select {
+        min-height: 50px;
+        padding: var(--spacing-md) var(--spacing-lg);
+        font-size: var(--font-size-md);
+        border-radius: var(--border-radius-lg);
+    }
+
+    textarea {
+        min-height: 120px;
+    }
+
+    .form-label {
+        font-size: var(--font-size-md);
+        font-weight: 600;
+        margin-bottom: var(--spacing-sm);
+    }
+
+    /* ===== TABLE OPTIMIZATIONS ===== */
+    .data-table {
+        font-size: var(--font-size-sm);
+    }
+
+    .data-table th {
+        padding: var(--spacing-md);
+        font-size: var(--font-size-xs);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        position: sticky;
+        top: 0;
+        background: var(--bg-secondary);
+        z-index: 10;
+    }
+
+    .data-table td {
+        padding: var(--spacing-md);
+        font-size: var(--font-size-sm);
+    }
+
+    /* Make action buttons in tables bigger */
+    .data-table .btn--icon {
+        width: 40px;
+        height: 40px;
+    }
+
+    /* ===== CARD OPTIMIZATIONS ===== */
+    .card {
+        border-radius: var(--border-radius-xl);
+        margin-bottom: var(--spacing-lg);
+    }
+
+    .card__header {
+        padding: var(--spacing-lg);
+    }
+
+    .card__title {
+        font-size: var(--font-size-lg);
+        font-weight: 700;
+    }
+
+    .card__title svg {
+        width: 24px;
+        height: 24px;
+    }
+
+    .card__body {
+        padding: var(--spacing-lg);
+    }
+
+    /* ===== STATS CARDS ===== */
+    .stat-card {
+        padding: var(--spacing-lg);
+    }
+
+    .stat-card__icon {
+        width: 48px !important;
+        height: 48px !important;
+    }
+
+    .stat-card__icon svg {
+        width: 28px;
+        height: 28px;
+    }
+
+    .stat-card__label {
+        font-size: var(--font-size-sm);
+        margin-top: var(--spacing-sm);
+    }
+
+    .stat-card__value {
+        font-size: 2rem !important;
+        margin-top: var(--spacing-xs);
+    }
+
+    .stat-card__period {
+        font-size: var(--font-size-xs);
+    }
+
+    .stat-card__trend {
+        font-size: var(--font-size-sm);
+    }
+
+    /* ===== BADGE OPTIMIZATIONS ===== */
+    .badge {
+        padding: 6px 12px;
+        font-size: var(--font-size-sm);
+        font-weight: 600;
+        border-radius: var(--border-radius-full);
+    }
+
+    /* ===== MODAL OPTIMIZATIONS ===== */
+    .modal {
+        width: 95%;
+        max-width: 500px;
+        border-radius: var(--border-radius-xl);
+    }
+
+    .modal__header {
+        padding: var(--spacing-lg);
+    }
+
+    .modal__title {
+        font-size: var(--font-size-xl);
+    }
+
+    .modal__close {
+        width: 44px;
+        height: 44px;
+    }
+
+    .modal__close svg {
+        width: 24px;
+        height: 24px;
+    }
+
+    .modal__body {
+        padding: var(--spacing-lg);
+    }
+
+    .modal__footer {
+        padding: var(--spacing-lg);
+        gap: var(--spacing-md);
+    }
+
+    /* ===== DROPDOWN OPTIMIZATIONS ===== */
+    .dropdown__menu {
+        font-size: var(--font-size-md);
+        border-radius: var(--border-radius-lg);
+    }
+
+    .dropdown__item {
+        padding: var(--spacing-md) var(--spacing-lg);
+        min-height: 48px;
+        display: flex;
+        align-items: center;
+    }
+
+    .dropdown__item svg {
+        width: 22px;
+        height: 22px;
+        margin-right: var(--spacing-md);
+    }
+
+    /* ===== NOTIFICATION OPTIMIZATIONS ===== */
+    .notification-item {
+        padding: var(--spacing-md);
+        min-height: 64px;
+    }
+
+    .notification-icon {
+        width: 40px;
+        height: 40px;
+    }
+
+    .notification-icon svg {
+        width: 22px;
+        height: 22px;
+    }
+
+    .notification-title {
+        font-size: var(--font-size-md);
+    }
+
+    .notification-time {
+        font-size: var(--font-size-sm);
+    }
+
+    /* ===== EMPTY STATE OPTIMIZATIONS ===== */
+    .empty-state__icon {
+        width: 80px;
+        height: 80px;
+        font-size: 3rem;
+    }
+
+    .empty-state__icon svg {
+        width: 64px;
+        height: 64px;
+    }
+
+    .empty-state__title {
+        font-size: var(--font-size-xl);
+        margin-top: var(--spacing-lg);
+    }
+
+    .empty-state__description {
+        font-size: var(--font-size-md);
+        margin-top: var(--spacing-sm);
+    }
+
+    /* ===== LOGIN SCREEN OPTIMIZATIONS ===== */
+    .login-card {
+        padding: var(--spacing-2xl);
+        border-radius: var(--border-radius-2xl);
+    }
+
+    .login-logo img,
+    .logo-image {
+        max-width: 180px;
+        height: auto;
+    }
+
+    .login-title {
+        font-size: var(--font-size-2xl);
+        margin-top: var(--spacing-lg);
+    }
+
+    .login-subtitle {
+        font-size: var(--font-size-md);
+    }
+
+    /* ===== TABS OPTIMIZATIONS ===== */
+    .settings-tab {
+        padding: var(--spacing-md) var(--spacing-lg);
+        font-size: var(--font-size-md);
+        min-height: 52px;
+        white-space: nowrap;
+    }
+
+    .settings-tab svg {
+        width: 22px;
+        height: 22px;
+    }
+
+    /* Make tabs scrollable on mobile */
+    .settings-tabs {
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    .settings-tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* ===== DASHBOARD SPECIFIC ===== */
+    .dashboard__row--stats {
+        gap: var(--spacing-md);
+    }
+
+    /* Hide less important info on mobile */
+    .stat-card__period {
+        display: none;
+    }
+
+    /* ===== ICON SPRITES OPTIMIZATION ===== */
+    /* All SVG icons should scale proportionally */
+    svg {
+        width: 100%;
+        height: 100%;
+    }
+
+    /* Specific icon contexts */
+    .sidebar__menu-icon svg,
+    .header__action-btn svg,
+    .btn svg,
+    .card__title svg,
+    .module-header svg {
+        flex-shrink: 0;
+    }
+}
+
+/* ========== EXTRA SMALL DEVICES (< 480px) ========== */
+@media (max-width: 479px) {
+    :root {
+        --device-type: 'smartphone-small';
+    }
+
+    /* Even larger base font for very small screens */
+    html {
+        font-size: 19px;
+    }
+
+    /* Compact header on very small screens */
+    .header__title {
+        font-size: var(--font-size-md);
+        max-width: 150px;
+    }
+
+    /* Stack buttons vertically when needed */
+    .modal__footer,
+    .card__header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .modal__footer .btn,
+    .card__header .btn {
+        width: 100%;
+    }
+
+    /* Full width cards */
+    .card {
+        border-radius: var(--border-radius-lg);
+    }
+
+    /* Reduce padding on very small screens */
+    .content {
+        padding: var(--spacing-sm);
+    }
+
+    .card__body,
+    .card__header {
+        padding: var(--spacing-md);
+    }
+}
+
+/* ========== LARGE DESKTOP (1920px+) ========== */
+@media (min-width: 1920px) {
+    :root {
+        --device-type: 'desktop-large';
+    }
+
+    /* Slightly reduce icon sizes on very large screens */
+    html {
+        font-size: 16px;
+        /* Keep standard */
+    }
+
+    /* Prevent UI from being too small on large monitors */
+    .content {
+        max-width: 1600px;
+        margin: 0 auto;
+    }
+}
+
+/* ========== TOUCH DEVICE DETECTION ========== */
+@media (hover: none) and (pointer: coarse) {
+    /* This is a touch device */
+
+    /* Remove hover effects on touch */
+    .btn:hover,
+    .sidebar__menu-link:hover,
+    .card:hover {
+        transform: none;
+    }
+
+    /* Add active states instead */
+    .btn:active {
+        transform: scale(0.97);
+    }
+
+    .sidebar__menu-link:active {
+        background-color: var(--bg-sidebar-active);
+    }
+
+    /* Increase all clickable areas */
+    a,
+    button,
+    input,
+    select,
+    textarea,
+    label {
+        min-height: var(--touch-target-min);
+        min-width: var(--touch-target-min);
+    }
+}
+
+/* ========== HIGH DPI DISPLAYS ========== */
+@media (-webkit-min-device-pixel-ratio: 2),
+(min-resolution: 192dpi) {
+
+    /* Sharper borders and shadows */
+    .card {
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+    }
+
+    /* Thinner borders for retina */
+    input,
+    select,
+    textarea,
+    .card,
+    .modal {
+        border-width: 0.5px;
+    }
+}
+
+/* ========== LANDSCAPE ORIENTATION (Mobile) ========== */
+@media (max-width: 767px) and (orientation: landscape) {
+
+    /* Reduce header height in landscape */
+    .header {
+        height: 56px;
+    }
+
+    /* Make sidebar overlay instead of pushing content */
+    .sidebar {
+        position: fixed;
+        z-index: 1000;
+    }
+
+    /* Reduce vertical padding */
+    .content {
+        padding: var(--spacing-sm) var(--spacing-md);
+    }
+
+    .card__body {
+        padding: var(--spacing-md);
+    }
+}
+
+/* ========== PRINT OPTIMIZATIONS ========== */
+@media print {
+
+    /* Hide navigation elements */
+    .sidebar,
+    .header,
+    .btn,
+    .header__actions {
+        display: none !important;
+    }
+
+    /* Full width content */
+    .main {
+        margin-left: 0;
+    }
+
+    .content {
+        max-width: 100%;
+        padding: 0;
+    }
+
+    /* Ensure readable font sizes */
+    body {
+        font-size: 12pt;
+    }
+
+    h1 {
+        font-size: 24pt;
+    }
+
+    h2 {
+        font-size: 20pt;
+    }
+
+    h3 {
+        font-size: 16pt;
+    }
+
+    /* Black text for printing */
+    body {
+        color: #000;
+        background: #fff;
+    }
+
+    /* Keep tables together */
+    .data-table {
+        page-break-inside: avoid;
+    }
+
+    .data-table thead {
+        display: table-header-group;
+    }
+}
+
+/* ========== ACCESSIBILITY - LARGE TEXT MODE ========== */
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* ========== DARK MODE OPTIMIZATIONS ========== */
+@media (prefers-color-scheme: dark) {
+    /* Auto dark mode could be enabled here if user hasn't set preference */
+}
