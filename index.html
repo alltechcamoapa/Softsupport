@@ -154,7 +154,14 @@
         // Now sync can correctly verify state vs Supabase session
         await SessionSync.checkAndSync();
 
-        // Initialize the app (State.init is idempotent, so it's safe to call again)
+        // Cargar datos de negocio desde Supabase (Pre-fetching)
+        if (State.isLoggedIn()) {
+            console.log('☁️ Iniciando carga de datos...');
+            const success = await DataService.init();
+            if (!success) console.warn('⚠️ DataService inició con datos parciales o vacíos');
+        }
+
+        // Initialize the app
         App.init();
 
         console.log('✅ ALLTECH SUPPORT - Inicialización completa');
