@@ -55,6 +55,8 @@
   <link rel="stylesheet" href="css/responsive-optimization.css">
   <link rel="stylesheet" href="css/welcome-animations.css">
   <link rel="stylesheet" href="css/pwa.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/notifications.css">
 
   <!-- Supabase Client Library -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -158,6 +160,8 @@
 
   <!-- Session Sync -->
   <script src="js/services/session-sync.js"></script>
+  <!-- Notification Service -->
+  <script src="js/services/notification-service.js"></script>
   <!-- PWA Manager -->
   <script src="js/pwa-manager.js"></script>
   <!-- Main App -->
@@ -180,6 +184,11 @@
           console.log('☁️ Iniciando carga de datos...');
           const success = await DataService.init();
           if (!success) console.warn('⚠️ DataService inició con datos parciales o vacíos');
+
+          // Initialize notifications AFTER data is loaded
+          if (typeof NotificationService !== 'undefined') {
+            NotificationService.init();
+          }
         }
 
         // Initialize the app

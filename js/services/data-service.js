@@ -15,6 +15,7 @@ const DataService = (() => {
         software: [],
         productos: [],
         proformas: [],
+        pedidos: [],
         users: [],
         config: {
             monedaPrincipal: 'USD',
@@ -542,6 +543,56 @@ const DataService = (() => {
         vencidas: cache.proformas?.filter(p => p.estado === 'Vencida').length || 0,
         valorAprobado: cache.proformas?.filter(p => p.estado === 'Aprobada').reduce((sum, p) => sum + (p.total || 0), 0) || 0
     });
+
+    // ========== PEDIDOS ==========
+    const getPedidosSync = () => [...cache.pedidos];
+    const getPedidoById = (id) => cache.pedidos.find(p => p.pedidoId === id || p.id === id);
+    const getPedidosByCliente = (clienteId) => cache.pedidos.filter(p => p.clienteId === clienteId);
+    const getNextPedidoNumber = () => {
+        if (cache.pedidos.length === 0) return 1;
+        const maxNum = Math.max(...cache.pedidos.map(p => {
+            const num = p.numeroPedido?.match(/\d+/);
+            return num ? parseInt(num[0]) : 0;
+        }));
+        return maxNum + 1;
+    };
+    const createPedido = (data) => {
+        const numero = getNextPedidoNumber();
+        const pedido = {
+            ...data,
+            pedidoId: `PED-${String(numero).padStart(5, '0')}`,
+            numeroPedido: `PED-${String(numero).padStart(5, '0')}`,
+            fecha: data.fecha || new Date().toISOString(),
+            estado: data.estado || 'Pendiente',
+            createdAt: new Date().toISOString()
+        };
+        cache.pedidos.unshift(pedido);
+        return pedido;
+    };
+    const updatePedido = (id, data) => {
+        const idx = cache.pedidos.findIndex(p => p.pedidoId === id || p.id === id);
+        if (idx !== -1) {
+            cache.pedidos[idx] = { ...cache.pedidos[idx], ...data, updatedAt: new Date().toISOString() };
+            return true;
+        }
+        return false;
+    };
+    const deletePedido = (id) => {
+        const idx = cache.pedidos.findIndex(p => p.pedidoId === id || p.id === id);
+        if (idx !== -1) {
+            cache.pedidos.splice(idx, 1);
+            return true;
+        }
+        return false;
+    };
+    const getPedidosStats = () => ({
+        total: cache.pedidos?.length || 0,
+        pendientes: cache.pedidos?.filter(p => p.estado === 'Pendiente').length || 0,
+        enProceso: cache.pedidos?.filter(p => p.estado === 'En Proceso').length || 0,
+        completados: cache.pedidos?.filter(p => p.estado === 'Completado').length || 0,
+        valorTotal: cache.pedidos?.reduce((sum, p) => sum + (p.total || 0), 0) || 0
+    });
+
     const getContractTemplates = () => cache.contractTemplates;
     const getContractTemplateById = () => null;
     const saveContractTemplate = () => { };

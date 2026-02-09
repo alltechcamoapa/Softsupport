@@ -18,9 +18,7 @@ const LoginModule = (() => {
                             <img src="assets/logo.png" 
                                  alt="ALLTECH SUPPORT" 
                                  class="login-logo" 
-                                 style="max-width: 200px; height: auto; display: block;
-                                        filter: brightness(1.2) contrast(1.1) saturate(1.1) drop-shadow(0 4px 12px rgba(26,115,232,0.5));
-                                        background: transparent;" 
+                                 style="max-width: 200px; height: auto; display: block; background: transparent;" 
                                  onerror="this.style.display='none'">
                         </div>
                         <h1 style="color: #ffffff; font-size: 32px; font-weight: 700; margin: 0 0 12px 0; letter-spacing: -0.5px;">ALLTECH SUPPORT</h1>
@@ -206,9 +204,21 @@ const LoginModule = (() => {
                         console.warn('⚠️ DataService cargó con datos parciales');
                     }
 
+                    // Inicializar notificaciones
+                    if (typeof NotificationService !== 'undefined') {
+                        NotificationService.init();
+                    }
+
                     if (typeof App !== 'undefined' && App.render) {
                         console.log('🎨 Renderizando aplicación...');
                         App.render();
+
+                        // Mostrar toast de bienvenida
+                        setTimeout(() => {
+                            if (typeof NotificationService !== 'undefined') {
+                                NotificationService.showToast(`¡Bienvenido ${user.name}!`, 'success', 3000);
+                            }
+                        }, 500);
                     } else {
                         console.error('❌ App.render not found');
                         showError('❌ Error al cargar la app\nRecarga la página');

@@ -124,34 +124,22 @@ const App = (() => {
         
         <div class="header__actions">
           <div class="dropdown">
-            <button class="header__action-btn" id="notificationsBtn" onclick="App.toggleNotifications()">
+            <button class="header__action-btn notification-bell ${(typeof NotificationService !== 'undefined' && NotificationService.getUnreadCount() > 0) ? 'has-notifications' : ''}" id="notificationsBtn" onclick="App.toggleNotifications()">
               ${Icons.bell}
-              <span class="badge">3</span>
+              <span class="badge" style="${(typeof NotificationService !== 'undefined' && NotificationService.getUnreadCount() > 0) ? '' : 'display:none'}">${typeof NotificationService !== 'undefined' ? NotificationService.getUnreadCount() : 0}</span>
             </button>
-            <div class="dropdown__menu dropdown__menu--right" id="notificationsDropdown">
-                <div class="dropdown__header">Notificaciones</div>
+            <div class="dropdown__menu dropdown__menu--right dropdown__menu--notifications" id="notificationsDropdown" style="width: 320px; max-height: 400px; overflow-y: auto;">
+                <div class="dropdown__header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>Notificaciones</span>
+                    <button class="btn btn--ghost btn--xs" onclick="NotificationService.markAllAsRead()" style="font-size: 11px;">Marcar leídas</button>
+                </div>
                 <div class="notification-list">
-                    <div class="notification-item unread">
-                        <div class="notification-icon warning">${Icons.alertCircle}</div>
-                        <div class="notification-content">
-                            <div class="notification-title">Contrato por vencer</div>
-                            <div class="notification-time">Hace 2 horas</div>
-                        </div>
-                    </div>
-                    <div class="notification-item unread">
-                        <div class="notification-icon info">${Icons.info}</div>
-                        <div class="notification-content">
-                            <div class="notification-title">Nueva visita asignada</div>
-                            <div class="notification-time">Hace 4 horas</div>
-                        </div>
-                    </div>
-                     <div class="notification-item">
-                        <div class="notification-icon success">${Icons.checkCircle}</div>
-                        <div class="notification-content">
-                            <div class="notification-title">Proforma aprobada</div>
-                            <div class="notification-time">Ayer</div>
-                        </div>
-                    </div>
+                    ${typeof NotificationService !== 'undefined' ? NotificationService.renderList() : '<div style="padding: 16px; text-align: center; color: var(--text-muted);">Cargando...</div>'}
+                </div>
+                <div class="dropdown__footer" style="padding: var(--spacing-sm); border-top: 1px solid var(--border-color); text-align: center;">
+                    <button class="btn btn--ghost btn--sm" onclick="NotificationService.refresh(); App.toggleNotifications();" style="width: 100%;">
+                        ${Icons.refreshCw} Actualizar
+                    </button>
                 </div>
             </div>
           </div>
@@ -239,9 +227,9 @@ const App = (() => {
       <div class="dashboard">
         <!-- Stats Row -->
         <div class="dashboard__row dashboard__row--stats">
-          <div class="stat-card stat-card--primary">
+          <div class="stat-card stat-card--primary" onclick="App.navigate('clientes')" title="Ver Clientes">
             <div class="stat-card__header">
-              <div class="stat-card__icon">${Icons.wallet}</div>
+              <div class="stat-card__icon">${Icons.users}</div>
               <span class="stat-card__trend stat-card__trend--${stats.clientesActivos.trendDirection}">
                 ${stats.clientesActivos.trendDirection === 'up' ? Icons.trendingUp : Icons.trendingDown}
                 ${Math.abs(stats.clientesActivos.trend)}%
@@ -249,12 +237,12 @@ const App = (() => {
             </div>
             <span class="stat-card__label">Clientes Activos</span>
             <span class="stat-card__value">${stats.clientesActivos.value}</span>
-            <span class="stat-card__period">vs mes anterior</span>
+            <span class="stat-card__period">Click para ver más →</span>
           </div>
 
-          <div class="stat-card stat-card--success">
+          <div class="stat-card stat-card--success" onclick="App.navigate('visitas')" title="Ver Visitas">
             <div class="stat-card__header">
-              <div class="stat-card__icon">${Icons.arrowDownLeft}</div>
+              <div class="stat-card__icon">${Icons.calendar}</div>
               <span class="stat-card__trend stat-card__trend--${stats.serviciosMes.trendDirection}">
                 ${stats.serviciosMes.trendDirection === 'up' ? Icons.trendingUp : Icons.trendingDown}
                 ${Math.abs(stats.serviciosMes.trend)}%
@@ -262,12 +250,12 @@ const App = (() => {
             </div>
             <span class="stat-card__label">Servicios del Mes</span>
             <span class="stat-card__value">${stats.serviciosMes.value}</span>
-            <span class="stat-card__period">vs mes anterior</span>
+            <span class="stat-card__period">Click para ver más →</span>
           </div>
 
-          <div class="stat-card stat-card--warning">
+          <div class="stat-card stat-card--warning" onclick="App.navigate('proformas')" title="Ver Proformas">
             <div class="stat-card__header">
-              <div class="stat-card__icon">${Icons.arrowUpRight}</div>
+              <div class="stat-card__icon">${Icons.fileText}</div>
               <span class="stat-card__trend stat-card__trend--${stats.ingresosMes.trendDirection}">
                 ${stats.ingresosMes.trendDirection === 'up' ? Icons.trendingUp : Icons.trendingDown}
                 ${Math.abs(stats.ingresosMes.trend)}%
@@ -275,12 +263,12 @@ const App = (() => {
             </div>
             <span class="stat-card__label">Ingresos (USD)</span>
             <span class="stat-card__value">$${stats.ingresosMes.value.toFixed(2)}</span>
-            <span class="stat-card__period">vs mes anterior</span>
+            <span class="stat-card__period">Click para ver más →</span>
           </div>
 
-          <div class="stat-card stat-card--info">
+          <div class="stat-card stat-card--info" onclick="App.navigate('contratos')" title="Ver Contratos">
             <div class="stat-card__header">
-              <div class="stat-card__icon">${Icons.piggyBank}</div>
+              <div class="stat-card__icon">${Icons.fileText}</div>
               <span class="stat-card__trend stat-card__trend--${stats.contratosActivos.trendDirection}">
                 ${stats.contratosActivos.trendDirection === 'up' ? Icons.trendingUp : Icons.trendingDown}
                 ${Math.abs(stats.contratosActivos.trend)}%
@@ -288,7 +276,7 @@ const App = (() => {
             </div>
             <span class="stat-card__label">Contratos Activos</span>
             <span class="stat-card__value">${stats.contratosActivos.value}</span>
-            <span class="stat-card__period">vs mes anterior</span>
+            <span class="stat-card__period">Click para ver más →</span>
           </div>
         </div>
 
