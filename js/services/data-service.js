@@ -194,6 +194,7 @@ const DataService = (() => {
             "equipos": { create: true, read: true, update: true, delete: true },
             "software": { create: true, read: true, update: true, delete: true },
             "productos": { create: true, read: true, update: true, delete: true },
+            "pedidos": { create: true, read: true, update: true, delete: true },
             "proformas": { create: true, read: true, update: true, delete: true },
             "usuarios": { create: true, read: true, update: true, delete: true },
             "configuracion": { create: true, read: true, update: true, delete: true },
@@ -206,6 +207,7 @@ const DataService = (() => {
             "equipos": { create: false, read: true, update: false, delete: false },
             "software": { create: false, read: true, update: false, delete: false },
             "productos": { create: true, read: true, update: true, delete: false },
+            "pedidos": { create: true, read: true, update: true, delete: false },
             "proformas": { create: true, read: true, update: true, delete: false },
             "usuarios": { create: false, read: false, update: false, delete: false },
             "configuracion": { create: false, read: true, update: false, delete: false },
@@ -218,6 +220,7 @@ const DataService = (() => {
             "equipos": { create: true, read: true, update: true, delete: false },
             "software": { create: true, read: true, update: true, delete: false },
             "productos": { create: false, read: true, update: false, delete: false },
+            "pedidos": { create: false, read: true, update: true, delete: false },
             "proformas": { create: false, read: true, update: false, delete: false },
             "usuarios": { create: false, read: false, update: false, delete: false },
             "configuracion": { create: false, read: true, update: false, delete: false },
@@ -500,7 +503,11 @@ const DataService = (() => {
     const getUsers = () => cache.users;
     const getUsersSync = () => cache.users;
     const getUserByUsername = () => null;
-    const createUser = () => { };
+    const createUser = async (data) => {
+        console.warn('⚠️ Creación de usuarios client-side limitada');
+        alert('LIMITACIÓN DE SEGURIDAD:\n\nNo se pueden crear usuarios directamente desde la aplicación sin una función de servidor (Edge Function).\n\nPor favor, pide al usuario que se registre en la pantalla de inicio, o créalo desde el panel de control de Supabase.\n\nUna vez registrado, podrás asignarle roles aquí.');
+        return null;
+    };
     const updateUser = () => { };
     const deleteUser = () => { };
 

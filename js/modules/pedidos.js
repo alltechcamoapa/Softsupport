@@ -10,15 +10,23 @@ const PedidosModule = (() => {
     let currentItems = [];
 
     // ========== CATEGORÍAS PREDEFINIDAS ==========
-    const CATEGORIAS = [
+    // ========== CATEGORÍAS ==========
+    const DEFAULT_CATEGORIAS = [
         { id: 'hardware', nombre: 'Hardware', icon: '💻', color: '#3b82f6' },
         { id: 'software', nombre: 'Software', icon: '📀', color: '#8b5cf6' },
         { id: 'redes', nombre: 'Redes', icon: '🌐', color: '#06b6d4' },
-        { id: 'impresoras', nombre: 'Impresoras', icon: '🖨️', color: '#f59e0b' },
+        { id: 'impresoras', nombre: 'Impresoras', icon: '🖨️', color: '#d97706' }, // Darker amber for readability
         { id: 'accesorios', nombre: 'Accesorios', icon: '🔌', color: '#10b981' },
         { id: 'servicios', nombre: 'Servicios', icon: '🔧', color: '#ef4444' },
         { id: 'otros', nombre: 'Otros', icon: '📦', color: '#6b7280' }
     ];
+    let categorias = JSON.parse(localStorage.getItem('pedidos_categorias')) || DEFAULT_CATEGORIAS;
+
+    const saveCategorias = () => {
+        localStorage.setItem('pedidos_categorias', JSON.stringify(categorias));
+        const listContainer = document.getElementById('categoriasList');
+        if (listContainer) listContainer.innerHTML = renderCategoriasList();
+    };
 
     // ========== RENDER PRINCIPAL ==========
     const render = () => {
@@ -35,6 +43,9 @@ const PedidosModule = (() => {
                         <p class="module-subtitle">${pedidos.length} pedidos registrados</p>
                     </div>
                     <div class="module-header__right">
+                        <button class="btn btn--secondary" onclick="PedidosModule.openCategoriasModal()" title="Gestionar Categorías">
+                            ${Icons.list || '📂'} Categorías
+                        </button>
                         <button class="btn btn--secondary" onclick="PedidosModule.openReportModal()">
                             ${Icons.barChart} Reportes
                         </button>
@@ -73,7 +84,7 @@ const PedidosModule = (() => {
                             <select class="form-select" style="width: 150px;" 
                                     onchange="PedidosModule.handleCategoriaFilter(this.value)">
                                 <option value="all">Todas las categorías</option>
-                                ${CATEGORIAS.map(cat => `
+                                 ${categorias.map(cat => `
                                     <option value="${cat.id}" ${filterState.categoria === cat.id ? 'selected' : ''}>
                                         ${cat.icon} ${cat.nombre}
                                     </option>
@@ -158,7 +169,7 @@ const PedidosModule = (() => {
                 <tbody class="data-table__body">
                     ${pedidos.map((pedido, index) => {
             const cliente = DataService.getClienteById(pedido.clienteId);
-            const categoria = CATEGORIAS.find(c => c.id === pedido.categoria) || CATEGORIAS[6];
+            const categoria = categorias.find(c => c.id === pedido.categoria) || categorias[0];
             const isCompleted = pedido.estado === 'Completado';
 
             return `
@@ -869,7 +880,7 @@ const PedidosModule = (() => {
             return;
         }
 
-        const categoria = CATEGORIAS.find(c => c.id === categoriaId);
+        const categoria = categorias.find(c => c.id === categoriaId);
         const pedidos = (DataService.getPedidosSync() || []).filter(p => p.categoria === categoriaId);
 
         if (pedidos.length === 0) {
@@ -879,6 +890,73 @@ const PedidosModule = (() => {
 
         generateReportPDF('Reporte de Pedidos por Categoría', `Categoría: ${categoria?.icon} ${categoria?.nombre}`, pedidos);
         closeModal();
+    };
+
+    // ========== GESTIÓN DE CATEGORÍAS ==========
+    const openCategoriasModal = () => {
+        const content = `
+          <div class="modal-overlay open" onclick="PedidosModule.closeModal(event)">
+            <div class="modal" onclick="event.stopPropagation()" style="width: 500px; max-width: 95%;">
+              <div class="modal__header">
+                <h3 class="modal__title">Gestionar Categorías</h3>
+                <button class="modal__close" onclick="PedidosModule.closeModal()">${Icons.x}</button>
+              </div>
+              <div class="modal__body">
+                <p class="text-sm text-muted mb-4">Edita los nombres, iconos y colores de las categorías de pedidos.</p>
+                 <div id="categoriasList" style="display: flex; flex-direction: column; gap: 10px; max-height: 400px; overflow-y: auto; padding: 5px;">
+                    ${renderCategoriasList()}
+                 </div>
+                 <button class="btn btn--secondary btn--sm w-full mt-4" onclick="PedidosModule.addCategoria()">
+                    ${Icons.plus} Añadir Categoría
+                 </button>
+              </div>
+              <div class="modal__footer">
+                 <button class="btn btn--primary" onclick="PedidosModule.closeModal(); App.render();">Listo</button>
+              </div>
+            </div>
+          </div>
+        `;
+        document.getElementById('pedidoModal').innerHTML = content;
+    };
+
+    const renderCategoriasList = () => {
+        return categorias.map((c, i) => `
+            <div class="card" style="padding: 10px; display: flex; align-items: center; gap: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <input type="text" value="${c.icon}" maxlength="2" class="form-input" style="width: 40px; text-align: center;" 
+                       onchange="PedidosModule.updateCategoria(${i}, 'icon', this.value)" title="Icono">
+                
+                <input type="text" value="${c.nombre}" class="form-input" style="flex: 1;" 
+                       onchange="PedidosModule.updateCategoria(${i}, 'nombre', this.value)" placeholder="Nombre">
+                
+                <input type="color" value="${c.color}" class="form-input" style="width: 40px; padding: 2px; height: 38px;" 
+                       onchange="PedidosModule.updateCategoria(${i}, 'color', this.value)" title="Color">
+                
+                <button class="btn btn--ghost text-danger btn--icon" onclick="PedidosModule.deleteCategoria(${i})" title="Eliminar">
+                    ${Icons.trash}
+                </button>
+            </div>
+        `).join('');
+    };
+
+    const addCategoria = () => {
+        categorias.push({
+            id: 'cat_' + Date.now(),
+            nombre: 'Nueva Categoría',
+            icon: '📦',
+            color: '#6b7280'
+        });
+        saveCategorias();
+    };
+
+    const updateCategoria = (index, field, value) => {
+        categorias[index][field] = value;
+        saveCategorias();
+    };
+
+    const deleteCategoria = (index) => {
+        if (!confirm('¿Seguro que deseas eliminar esta categoría?')) return;
+        categorias.splice(index, 1);
+        saveCategorias();
     };
 
     const generateFechaReport = () => {
@@ -953,7 +1031,7 @@ const PedidosModule = (() => {
                     <tbody>
                         ${pedidos.map(p => {
             const cliente = DataService.getClienteById(p.clienteId);
-            const cat = CATEGORIAS.find(c => c.id === p.categoria) || CATEGORIAS[6];
+            const cat = categorias.find(c => c.id === p.categoria) || categorias[0];
             return `
                                 <tr>
                                     <td>${p.numeroPedido || p.pedidoId}</td>
@@ -997,7 +1075,13 @@ const PedidosModule = (() => {
         generateClienteReport,
         generateCategoriaReport,
         generateFechaReport,
+        generateFechaReport,
         addItem,
+        // Categories
+        openCategoriasModal,
+        addCategoria,
+        updateCategoria,
+        deleteCategoria,
         removeItem,
         updateItem
     };
