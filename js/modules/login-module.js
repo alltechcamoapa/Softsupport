@@ -9,8 +9,8 @@ const LoginModule = (() => {
     // ========== RENDER ==========
     const render = () => {
         return `
-            <div class="login-container" style="background-color: #000000; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;">
-                <div class="login-card" style="max-width: 450px; width: 100%; padding: 48px 40px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: 1px solid #0f3460; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.7);">
+            <div class="login-container" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;">
+                <div class="login-card" style="max-width: 450px; width: 100%; padding: 48px 40px; background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%); border: 1px solid #333333; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.7);">
                     
                     <!-- Header con logo centrado -->
                     <div class="login-header" style="text-align: center; margin-bottom: 40px;">
@@ -40,9 +40,9 @@ const LoginModule = (() => {
                                 required 
                                 placeholder="usuario@ejemplo.com"
                                 autocomplete="email"
-                                style="width: 100%; padding: 14px 16px; background: rgba(15, 52, 96, 0.3); border: 1px solid #0f3460; border-radius: 10px; color: #ffffff; font-size: 15px; outline: none; transition: all 0.2s; box-sizing: border-box;"
-                                onfocus="this.style.borderColor='#1a73e8'; this.style.background='rgba(26, 115, 232, 0.1)'"
-                                onblur="this.style.borderColor='#0f3460'; this.style.background='rgba(15, 52, 96, 0.3)'"
+                                style="width: 100%; padding: 14px 16px; background: rgba(255, 255, 255, 0.05); border: 1px solid #444444; border-radius: 10px; color: #ffffff; font-size: 15px; outline: none; transition: all 0.2s; box-sizing: border-box;"
+                                onfocus="this.style.borderColor='#1a73e8'; this.style.background='rgba(26, 115, 232, 0.15)'"
+                                onblur="this.style.borderColor='#444444'; this.style.background='rgba(255, 255, 255, 0.05)'"
                             />
                         </div>
 
@@ -56,9 +56,9 @@ const LoginModule = (() => {
                                 required 
                                 placeholder="••••••••"
                                 autocomplete="current-password"
-                                style="width: 100%; padding: 14px 16px; background: rgba(15, 52, 96, 0.3); border: 1px solid #0f3460; border-radius: 10px; color: #ffffff; font-size: 15px; outline: none; transition: all 0.2s; box-sizing: border-box;"
-                                onfocus="this.style.borderColor='#1a73e8'; this.style.background='rgba(26, 115, 232, 0.1)'"
-                                onblur="this.style.borderColor='#0f3460'; this.style.background='rgba(15, 52, 96, 0.3)'"
+                                style="width: 100%; padding: 14px 16px; background: rgba(255, 255, 255, 0.05); border: 1px solid #444444; border-radius: 10px; color: #ffffff; font-size: 15px; outline: none; transition: all 0.2s; box-sizing: border-box;"
+                                onfocus="this.style.borderColor='#1a73e8'; this.style.background='rgba(26, 115, 232, 0.15)'"
+                                onblur="this.style.borderColor='#444444'; this.style.background='rgba(255, 255, 255, 0.05)'"
                             />
                         </div>
 
@@ -78,7 +78,7 @@ const LoginModule = (() => {
                     </form>
 
                     <!-- Footer -->
-                    <div style="text-align: center; padding-top: 24px; border-top: 1px solid #0f3460;">
+                    <div style="text-align: center; padding-top: 24px; border-top: 1px solid #333333;">
                         <p style="color: #64748b; font-size: 13px; margin: 0 0 4px 0;">Versión 2.0 - Powered by Supabase</p>
                         <p style="color: #475569; font-size: 12px; margin: 0;">Camoapa, Nicaragua</p>
                     </div>
