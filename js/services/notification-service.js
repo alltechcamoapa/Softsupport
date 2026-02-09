@@ -1,18 +1,218 @@
 /**
  * ALLTECH SUPPORT - Notification Service
- * Sistema de notificaciones dinámicas y alertas
+ * Sistema de notificaciones dinámicas, alertas y Push Notifications
  */
 
 const NotificationService = (() => {
     // ========== STATE ==========
     let notifications = [];
     let unreadCount = 0;
+    let pushPermission = 'default';
+    let serviceWorkerRegistration = null;
 
     // ========== INITIALIZATION ==========
-    const init = () => {
+    const init = async () => {
         console.log('🔔 NotificationService: Inicializando...');
+
+        // Initialize push notifications
+        await initPushNotifications();
+
+        // Generate app notifications
         generateNotifications();
         updateBadge();
+    };
+
+    // ========== PUSH NOTIFICATIONS SETUP ==========
+    const initPushNotifications = async () => {
+        // Check if push notifications are supported
+        if (!('Notification' in window)) {
+            console.log('🔔 Push notifications not supported');
+            return false;
+        }
+
+        // Check if service worker is available
+        if (!('serviceWorker' in navigator)) {
+            console.log('🔔 Service Worker not supported');
+            return false;
+        }
+
+        // Get current permission state
+        pushPermission = Notification.permission;
+        console.log(`🔔 Push permission: ${pushPermission}`);
+
+        // If permission not decided, request it after a delay (better UX)
+        if (pushPermission === 'default') {
+            // Wait a bit before asking for permission (don't overwhelm user on first load)
+            setTimeout(() => {
+                requestPushPermission();
+            }, 5000);
+        }
+
+        // Get service worker registration
+        try {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            if (registrations.length > 0) {
+                serviceWorkerRegistration = registrations[0];
+                console.log('🔔 Service Worker registration obtained');
+            }
+        } catch (error) {
+            console.error('🔔 Error getting Service Worker registration:', error);
+        }
+
+        return true;
+    };
+
+    // ========== REQUEST PUSH PERMISSION ==========
+    const requestPushPermission = async () => {
+        if (!('Notification' in window)) {
+            console.log('🔔 Notifications not supported');
+            return false;
+        }
+
+        // If already granted or denied, don't ask again
+        if (pushPermission !== 'default') {
+            return pushPermission === 'granted';
+        }
+
+        try {
+            const permission = await Notification.requestPermission();
+            pushPermission = permission;
+            console.log(`🔔 Push permission result: ${permission}`);
+
+            if (permission === 'granted') {
+                // Show a welcome notification
+                showPushNotification(
+                    '¡Notificaciones activadas!',
+                    'Recibirás alertas importantes de ALLTECH Support.',
+                    { tag: 'welcome', icon: '/assets/icons/icon-192x192.png' }
+                );
+            }
+
+            return permission === 'granted';
+        } catch (error) {
+            console.error('🔔 Error requesting permission:', error);
+            return false;
+        }
+    };
+
+    // ========== SHOW PUSH NOTIFICATION ==========
+    const showPushNotification = (title, body, options = {}) => {
+        if (pushPermission !== 'granted') {
+            console.log('🔔 Push permission not granted, cannot show notification');
+            return false;
+        }
+
+        const defaultOptions = {
+            icon: '/assets/icons/icon-192x192.png',
+            badge: '/assets/icons/icon-72x72.png',
+            vibrate: [100, 50, 100],
+            requireInteraction: false,
+            silent: false,
+            ...options
+        };
+
+        try {
+            // Use Service Worker notification for better reliability
+            if (serviceWorkerRegistration) {
+                serviceWorkerRegistration.showNotification(title, {
+                    body,
+                    ...defaultOptions
+                });
+            } else {
+                // Fallback to regular notification
+                new Notification(title, {
+                    body,
+                    ...defaultOptions
+                });
+            }
+            return true;
+        } catch (error) {
+            console.error('🔔 Error showing push notification:', error);
+            return false;
+        }
+    };
+
+    // ========== SEND IMPORTANT ALERT ==========
+    const sendImportantAlert = (type, data) => {
+        if (pushPermission !== 'granted') return;
+
+        switch (type) {
+            case 'contract_expiring':
+                showPushNotification(
+                    '⚠️ Contrato por vencer',
+                    `El contrato de ${data.cliente} vence en ${data.dias} días`,
+                    { tag: `contract-${data.id}`, requireInteraction: true }
+                );
+                break;
+
+            case 'visit_today':
+                showPushNotification(
+                    '📅 Visita programada HOY',
+                    `${data.cliente} - ${data.tipo} a las ${data.hora}`,
+                    { tag: `visit-${data.id}`, requireInteraction: true }
+                );
+                break;
+
+            case 'new_order':
+                showPushNotification(
+                    '🛒 Nuevo pedido',
+                    `Se ha registrado un nuevo pedido de ${data.cliente}`,
+                    { tag: `order-${data.id}` }
+                );
+                break;
+
+            case 'data_sync':
+                showPushNotification(
+                    '🔄 Datos actualizados',
+                    'Los datos se han sincronizado correctamente',
+                    { tag: 'sync', silent: true }
+                );
+                break;
+        }
+    };
+
+    // ========== CHECK AND NOTIFY IMPORTANT EVENTS ==========
+    const checkAndNotifyImportantEvents = () => {
+        if (pushPermission !== 'granted') return;
+
+        const now = new Date();
+
+        // Check contracts expiring in 3 days or less
+        const contratos = DataService.getContratosSync();
+        contratos.forEach(contrato => {
+            if (contrato.fechaFin) {
+                const fechaFin = new Date(contrato.fechaFin);
+                const diasRestantes = Math.ceil((fechaFin - now) / (1000 * 60 * 60 * 24));
+
+                if (diasRestantes > 0 && diasRestantes <= 3) {
+                    const cliente = DataService.getClienteById(contrato.clienteId);
+                    sendImportantAlert('contract_expiring', {
+                        id: contrato.contratoId || contrato.id,
+                        cliente: cliente?.empresa || 'Cliente',
+                        dias: diasRestantes
+                    });
+                }
+            }
+        });
+
+        // Check visits for today
+        const visitas = DataService.getVisitasSync();
+        visitas.forEach(visita => {
+            if (visita.fechaInicio && !visita.trabajoRealizado) {
+                const fechaVisita = new Date(visita.fechaInicio);
+                const isToday = fechaVisita.toDateString() === now.toDateString();
+
+                if (isToday) {
+                    const cliente = DataService.getClienteById(visita.clienteId);
+                    sendImportantAlert('visit_today', {
+                        id: visita.visitaId || visita.id,
+                        cliente: cliente?.empresa || 'Cliente',
+                        tipo: visita.tipoVisita || 'Mantenimiento',
+                        hora: fechaVisita.toLocaleTimeString('es-NI', { hour: '2-digit', minute: '2-digit' })
+                    });
+                }
+            }
+        });
     };
 
     // ========== GENERATE DYNAMIC NOTIFICATIONS ==========
@@ -243,6 +443,7 @@ const NotificationService = (() => {
     // ========== GETTERS ==========
     const getNotifications = () => notifications;
     const getUnreadCount = () => unreadCount;
+    const getPushPermission = () => pushPermission;
 
     // ========== PUBLIC API ==========
     return {
@@ -254,7 +455,13 @@ const NotificationService = (() => {
         updateBadge,
         showToast,
         getNotifications,
-        getUnreadCount
+        getUnreadCount,
+        // Push Notifications
+        requestPushPermission,
+        showPushNotification,
+        sendImportantAlert,
+        checkAndNotifyImportantEvents,
+        getPushPermission
     };
 })();
 

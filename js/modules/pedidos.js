@@ -793,6 +793,55 @@ const PedidosModule = (() => {
         `;
     };
 
+    // ========== PDF TEMPLATE ==========
+    const generatePDFTemplate = (title, content) => {
+        return `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>${title}</title>
+                <style>
+                    * { margin: 0; padding: 0; box-sizing: border-box; }
+                    body { font-family: Arial, sans-serif; padding: 40px; color: #333; font-size: 12px; }
+                    .header { display: flex; justify-content: space-between; margin-bottom: 30px; border-bottom: 2px solid #1a73e8; padding-bottom: 20px; }
+                    .header h1, .company-info h1 { color: #1a73e8; font-size: 24px; margin-bottom: 5px; }
+                    .header h2, .pedido-info h2 { color: #333; font-size: 20px; text-align: right; }
+                    .header p { color: #666; margin-top: 3px; }
+                    .pedido-info { text-align: right; }
+                    .section { margin-bottom: 25px; }
+                    .section-title { font-size: 14px; font-weight: bold; color: #1a73e8; margin-bottom: 10px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+                    .client-info p { margin: 3px 0; }
+                    .info-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 15px; }
+                    .info-item { padding: 10px; background: #f8f9fa; border-radius: 4px; }
+                    .info-label { font-size: 10px; color: #666; text-transform: uppercase; margin-bottom: 3px; }
+                    .info-value { font-size: 16px; font-weight: 600; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+                    th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #ddd; }
+                    th { background: #1a73e8; color: white; font-weight: 600; }
+                    tr:nth-child(even) { background: #f8f9fa; }
+                    .totals { margin-top: 20px; margin-left: auto; width: 250px; }
+                    .totals-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
+                    .totals-row--total { border-top: 2px solid #1a73e8; border-bottom: none; font-weight: bold; font-size: 16px; color: #1a73e8; padding-top: 12px; }
+                    .footer { margin-top: 40px; text-align: center; font-size: 10px; color: #999; border-top: 1px solid #ddd; padding-top: 20px; }
+                    .badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 10px; font-weight: 500; }
+                    .badge-success { background: #d4edda; color: #155724; }
+                    .badge-primary { background: #cce5ff; color: #004085; }
+                    .badge-warning { background: #fff3cd; color: #856404; }
+                    @media print { body { padding: 20px; } }
+                </style>
+            </head>
+            <body>
+                ${content}
+                <div class="footer">
+                    <p>ALLTECH - Sistema de Gestión de Soporte Técnico | Camoapa, Nicaragua</p>
+                    <p>Creado por: Ing. Emilio Urbina - Alltech</p>
+                </div>
+            </body>
+            </html>
+        `;
+    };
+
     // ========== REPORT GENERATORS ==========
     const generateClienteReport = () => {
         const clienteId = document.getElementById('reportClienteId').value;

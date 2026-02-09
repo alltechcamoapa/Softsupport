@@ -676,19 +676,41 @@ const EquiposModule = (() => {
   const handleClienteFilter = (value) => { filterState.clienteId = value; App.refreshCurrentModule(); };
   const handleEstadoFilter = (value) => { filterState.estado = value; App.refreshCurrentModule(); };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     const formData = new FormData(event.target);
-    const data = Object.fromEntries(formData.entries());
+    const rawData = Object.fromEntries(formData.entries());
 
-    if (data.equipoId) {
-      DataService.updateEquipo(data.equipoId, data);
-    } else {
-      data.equipoId = 'EQU' + String(Date.now()).slice(-6);
-      DataService.createEquipo(data);
+    // Obtener el cliente correspondiente para usar el UUID
+    const cliente = DataService.getClienteById(rawData.clienteId);
+
+    // Mapear camelCase (UI) a snake_case (DB)
+    const data = {
+      cliente_id: cliente?.id || rawData.clienteId,  // Usar UUID de Supabase
+      nombre_equipo: rawData.nombreEquipo,
+      marca: rawData.marca,
+      modelo: rawData.modelo,
+      serie: rawData.serie,
+      ubicacion: rawData.ubicacion || null,
+      estado: rawData.estado || 'Operativo'
+    };
+
+    try {
+      if (rawData.equipoId && rawData.equipoId.trim() !== '') {
+        // Actualizar equipo existente
+        await DataService.updateEquipo(rawData.equipoId, data);
+        console.log('✅ Equipo actualizado correctamente');
+      } else {
+        // Crear nuevo equipo
+        await DataService.createEquipo(data);
+        console.log('✅ Equipo creado correctamente');
+      }
+      closeModal();
+      App.refreshCurrentModule();
+    } catch (error) {
+      console.error('❌ Error al guardar equipo:', error);
+      alert('Error al guardar el equipo: ' + (error.message || 'Error desconocido'));
     }
-    closeModal();
-    App.refreshCurrentModule();
   };
 
   const handleReparacionSubmit = (event, equipoId) => {
@@ -753,13 +775,16 @@ const EquiposModule = (() => {
     setTimeout(() => ClientesModule.viewDetail(clienteId), 100);
   };
 
-  const deleteEquipo = (id) => {
+  const deleteEquipo = async (id) => {
     if (confirm('¿Estás seguro de eliminar este equipo? Esto eliminará también su historial de reparaciones.')) {
-      if (DataService.deleteEquipo(id)) {
+      try {
+        await DataService.deleteEquipo(id);
         ConfigModule.showToast('Equipo eliminado', 'success');
-        render();
-      } else {
-        alert('No se pudo eliminar el equipo');
+        console.log('✅ Equipo eliminado correctamente');
+        App.refreshCurrentModule();
+      } catch (error) {
+        console.error('❌ Error al eliminar equipo:', error);
+        alert('No se pudo eliminar el equipo: ' + (error.message || 'Error desconocido'));
       }
     }
   };

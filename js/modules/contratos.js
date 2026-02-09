@@ -753,13 +753,16 @@ const ContratosModule = (() => {
     }
   };
 
-  const deleteContrato = (id) => {
+  const deleteContrato = async (id) => {
     if (confirm('¿Estás seguro de eliminar este contrato? Esta acción no se puede deshacer.')) {
-      if (DataService.deleteContrato(id)) {
+      try {
+        await DataService.deleteContrato(id);
         ConfigModule.showToast('Contrato eliminado', 'success');
-        render();
-      } else {
-        alert('No se pudo eliminar el contrato');
+        console.log('✅ Contrato eliminado correctamente');
+        App.refreshCurrentModule();
+      } catch (error) {
+        console.error('❌ Error al eliminar contrato:', error);
+        alert('No se pudo eliminar el contrato: ' + (error.message || 'Error desconocido'));
       }
     }
   };
@@ -769,20 +772,41 @@ const ContratosModule = (() => {
   const handleStatusFilter = (value) => { filterState.status = value; App.refreshCurrentModule(); };
   const handleTipoFilter = (value) => { filterState.tipo = value; App.refreshCurrentModule(); };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     const formData = new FormData(event.target);
-    const data = Object.fromEntries(formData.entries());
-    data.tarifa = parseFloat(data.tarifa);
+    const rawData = Object.fromEntries(formData.entries());
 
-    if (data.contratoId) {
-      DataService.updateContrato(data.contratoId, data);
-    } else {
-      data.contratoId = 'CON' + String(Date.now()).slice(-6);
-      DataService.createContrato(data);
+    // Obtener el cliente correspondiente para usar el UUID
+    const cliente = DataService.getClienteById(rawData.clienteId);
+
+    // Mapear camelCase (UI) a snake_case (DB)
+    const data = {
+      cliente_id: cliente?.id || rawData.clienteId,  // Usar UUID de Supabase
+      tipo_contrato: rawData.tipoContrato,
+      estado_contrato: rawData.estadoContrato,
+      tarifa: parseFloat(rawData.tarifa),
+      moneda: rawData.moneda,
+      fecha_inicio: rawData.fechaInicio,
+      fecha_fin: rawData.fechaFin
+    };
+
+    try {
+      if (rawData.contratoId && rawData.contratoId.trim() !== '') {
+        // Actualizar contrato existente
+        await DataService.updateContrato(rawData.contratoId, data);
+        console.log('✅ Contrato actualizado correctamente');
+      } else {
+        // Crear nuevo contrato
+        await DataService.createContrato(data);
+        console.log('✅ Contrato creado correctamente');
+      }
+      closeModal();
+      App.refreshCurrentModule();
+    } catch (error) {
+      console.error('❌ Error al guardar contrato:', error);
+      alert('Error al guardar el contrato: ' + (error.message || 'Error desconocido'));
     }
-    closeModal();
-    App.refreshCurrentModule();
   };
 
   const openCreateModal = () => { document.getElementById('contratoModal').innerHTML = renderFormModal(); };

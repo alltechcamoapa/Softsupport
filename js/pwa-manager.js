@@ -218,6 +218,9 @@ const PWAManager = (function () {
         // Handle wake lock to keep screen on during active use
         setupWakeLock();
 
+        // Pull-to-refresh disabled - using refresh button instead
+        // setupPullToRefresh();
+
         // Smooth scrolling
         document.documentElement.style.scrollBehavior = 'smooth';
 
@@ -225,6 +228,123 @@ const PWAManager = (function () {
         if (_isInstalled) {
             document.body.classList.add('pwa-installed');
         }
+    }
+
+    // ===== PULL TO REFRESH =====
+
+    function setupPullToRefresh() {
+        // Only enable on touch devices
+        if (!('ontouchstart' in window)) return;
+
+        let startY = 0;
+        let currentY = 0;
+        let isPulling = false;
+        let pullThreshold = 80;
+        let pullIndicator = null;
+
+        // Create pull indicator element
+        const createPullIndicator = () => {
+            if (pullIndicator) return;
+
+            pullIndicator = document.createElement('div');
+            pullIndicator.className = 'pwa-pull-refresh';
+            pullIndicator.innerHTML = `
+                <div class="pwa-pull-refresh__content">
+                    <svg class="pwa-pull-refresh__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+                    </svg>
+                    <span class="pwa-pull-refresh__text">Desliza para actualizar</span>
+                </div>
+            `;
+            document.body.appendChild(pullIndicator);
+        };
+
+        // Touch start
+        document.addEventListener('touchstart', (e) => {
+            const content = document.querySelector('.content');
+            if (!content) return;
+
+            // Only activate if at top of scroll
+            if (content.scrollTop <= 0 || window.scrollY <= 0) {
+                startY = e.touches[0].clientY;
+                isPulling = true;
+                createPullIndicator();
+            }
+        }, { passive: true });
+
+        // Touch move
+        document.addEventListener('touchmove', (e) => {
+            if (!isPulling || !pullIndicator) return;
+
+            currentY = e.touches[0].clientY;
+            const pullDistance = currentY - startY;
+
+            // Only show indicator when pulling down
+            if (pullDistance > 0) {
+                const progress = Math.min(pullDistance / pullThreshold, 1);
+
+                // Update indicator visibility
+                if (progress > 0.2) {
+                    pullIndicator.classList.add('visible');
+                }
+
+                // Update pull state
+                if (progress >= 1) {
+                    pullIndicator.classList.add('pulling');
+                    pullIndicator.querySelector('.pwa-pull-refresh__text').textContent = 'Suelta para actualizar';
+                } else {
+                    pullIndicator.classList.remove('pulling');
+                    pullIndicator.querySelector('.pwa-pull-refresh__text').textContent = 'Desliza para actualizar';
+                }
+            }
+        }, { passive: true });
+
+        // Touch end
+        document.addEventListener('touchend', async () => {
+            if (!isPulling || !pullIndicator) return;
+
+            const pullDistance = currentY - startY;
+            const progress = pullDistance / pullThreshold;
+
+            if (progress >= 1) {
+                // Trigger refresh
+                pullIndicator.classList.add('refreshing');
+                pullIndicator.querySelector('.pwa-pull-refresh__text').textContent = 'Actualizando...';
+
+                try {
+                    // Use DataService.refreshData if available
+                    if (typeof DataService !== 'undefined' && DataService.refreshData) {
+                        await DataService.refreshData();
+
+                        // Re-render app
+                        if (typeof App !== 'undefined' && App.render) {
+                            App.render();
+                        }
+
+                        // Show success message
+                        if (typeof App !== 'undefined' && App.showNotification) {
+                            App.showNotification('¡Datos actualizados!', 'success');
+                        }
+                    }
+                } catch (error) {
+                    console.error('Pull-to-refresh error:', error);
+                    if (typeof App !== 'undefined' && App.showNotification) {
+                        App.showNotification('Error al actualizar', 'error');
+                    }
+                }
+            }
+
+            // Reset state
+            isPulling = false;
+            startY = 0;
+            currentY = 0;
+
+            if (pullIndicator) {
+                pullIndicator.classList.remove('visible', 'pulling', 'refreshing');
+            }
+        }, { passive: true });
+
+        console.log('📱 PWAManager: Pull-to-refresh enabled');
     }
 
     function setupBackButtonHandling() {

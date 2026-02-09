@@ -29,6 +29,8 @@ const DataService = (() => {
     };
 
     let isInitialized = false;
+    let isRefreshing = false;
+    let realtimeSubscription = null;
 
     // ========== UTILS: NORMALIZACIÓN DE DATOS ==========
     // Convierte snake_case de DB a camelCase de App y mapea IDs
@@ -57,6 +59,7 @@ const DataService = (() => {
         if (isInitialized) return true;
 
         console.log('☁️ DataService: Sincronizando desde Supabase...');
+        LogService.log('sistema', 'read', 'init', 'Sincronización de datos iniciada');
 
         try {
             // Asegurar que el cliente de Supabase esté inicializado
@@ -90,12 +93,97 @@ const DataService = (() => {
 
             isInitialized = true;
             console.log(`✅ DataService: Sincronización completa (${cache.clientes.length} Clientes, ${cache.contratos.length} Contratos)`);
+
+            // Suscribirse a cambios en tiempo real
+            setupRealtimeSubscription();
+
             return true;
         } catch (error) {
             console.error('❌ Error fatal iniciando DataService:', error);
             // No fallar completamente, permitir reintentos
             return false;
         }
+    };
+
+    // ========== REFRESH DATA (MANUAL) ==========
+    const refreshData = async () => {
+        if (isRefreshing) {
+            console.log('⏳ Refresh ya en progreso...');
+            return false;
+        }
+
+        isRefreshing = true;
+        console.log('🔄 DataService: Refrescando datos desde Supabase...');
+
+        try {
+            // Recargar todos los datos en paralelo
+            const [
+                clientes,
+                contratos,
+                equipos,
+                visitas
+            ] = await Promise.all([
+                SupabaseDataService.getClientesSync(),
+                SupabaseDataService.getContratosSync(),
+                SupabaseDataService.getEquiposSync(),
+                SupabaseDataService.getVisitasSync()
+            ]);
+
+            // Actualizar caché
+            cache.clientes = (clientes || []).map(c => normalizeSupabaseData('clientes', c));
+            cache.contratos = (contratos || []).map(c => ({ ...normalizeSupabaseData('contratos', c), cliente: normalizeSupabaseData('clientes', c.cliente) }));
+            cache.equipos = (equipos || []).map(e => ({ ...normalizeSupabaseData('equipos', e), cliente: normalizeSupabaseData('clientes', e.cliente) }));
+            cache.visitas = (visitas || []).map(v => normalizeSupabaseData('visitas', v));
+
+            console.log(`✅ DataService: Refresh completo (${cache.clientes.length} Clientes)`);
+
+            // Notificar a la UI
+            dispatchRefreshEvent();
+
+            isRefreshing = false;
+            return true;
+        } catch (error) {
+            console.error('❌ Error en refreshData:', error);
+            isRefreshing = false;
+            return false;
+        }
+    };
+
+    // ========== DISPATCH REFRESH EVENT ==========
+    const dispatchRefreshEvent = () => {
+        // Disparar evento personalizado para que la UI se actualice
+        window.dispatchEvent(new CustomEvent('dataRefreshed', {
+            detail: {
+                timestamp: Date.now(),
+                counts: {
+                    clientes: cache.clientes.length,
+                    contratos: cache.contratos.length,
+                    equipos: cache.equipos.length,
+                    visitas: cache.visitas.length
+                }
+            }
+        }));
+    };
+
+    // ========== REALTIME SUBSCRIPTION SETUP ==========
+    const setupRealtimeSubscription = () => {
+        if (typeof SupabaseDataService === 'undefined' || !SupabaseDataService.subscribeToChanges) {
+            console.warn('⚠️ SupabaseDataService.subscribeToChanges no disponible');
+            return;
+        }
+
+        // Limpiar suscripción anterior si existe
+        if (realtimeSubscription) {
+            console.log('🔌 Limpiando suscripción anterior...');
+            realtimeSubscription.unsubscribe?.();
+        }
+
+        // Crear nueva suscripción
+        realtimeSubscription = SupabaseDataService.subscribeToChanges((payload) => {
+            handleRealtimeUpdate(payload);
+        });
+
+        console.log('🔌 Suscripción Realtime establecida');
     };
 
     const loadDefaultPermissions = () => ({
@@ -203,6 +291,7 @@ const DataService = (() => {
         if (res.success) {
             const item = normalizeSupabaseData('clientes', res.data);
             cache.clientes.unshift(item); // Optimistic update fallback
+            LogService.log('clientes', 'create', item.id, `Cliente creado: ${item.nombreCliente || item.empresa}`, { codigo: item.clienteId });
             return item;
         }
         throw new Error(res.error || 'Error al crear cliente');
@@ -216,9 +305,10 @@ const DataService = (() => {
             const item = normalizeSupabaseData('clientes', res.data);
             const idx = cache.clientes.findIndex(c => c.id === uuid);
             if (idx !== -1) cache.clientes[idx] = { ...cache.clientes[idx], ...item };
+            LogService.log('clientes', 'update', uuid, `Cliente actualizado: ${item.nombreCliente || item.empresa}`);
             return true;
         }
-        return false;
+        throw new Error(res.error || 'Error al actualizar cliente');
     };
 
     const deleteCliente = async (id) => {
@@ -227,9 +317,10 @@ const DataService = (() => {
         const res = await SupabaseDataService.deleteCliente(uuid);
         if (res.success) {
             cache.clientes = cache.clientes.filter(c => c.id !== uuid);
+            LogService.log('clientes', 'delete', uuid, `Cliente eliminado: ${current?.nombreCliente || 'Desconocido'}`);
             return true;
         }
-        return false;
+        throw new Error(res.error || 'Error al eliminar cliente');
     };
 
     // ========== CRUD CONTRATOS ==========
@@ -258,8 +349,10 @@ const DataService = (() => {
         if (res.success) {
             const item = normalizeSupabaseData('contratos', res.data);
             cache.contratos.unshift(item);
+            LogService.log('contratos', 'create', item.id, `Contrato creado: ${item.contratoId}`, { clienteId: item.clienteId });
             return item;
         }
+        throw new Error(res.error || 'Error al crear contrato');
     };
 
     const updateContrato = async (id, data) => {
@@ -270,14 +363,22 @@ const DataService = (() => {
             const item = normalizeSupabaseData('contratos', res.data);
             const idx = cache.contratos.findIndex(c => c.id === uuid);
             if (idx !== -1) cache.contratos[idx] = { ...cache.contratos[idx], ...item };
+            LogService.log('contratos', 'update', uuid, `Contrato actualizado: ${item.contratoId}`);
+            return true;
         }
+        throw new Error(res.error || 'Error al actualizar contrato');
     };
 
     const deleteContrato = async (id) => {
         const current = getContratoById(id);
         const uuid = current ? current.id : id;
         const res = await SupabaseDataService.deleteContrato(uuid);
-        if (res.success) cache.contratos = cache.contratos.filter(c => c.id !== uuid);
+        if (res.success) {
+            cache.contratos = cache.contratos.filter(c => c.id !== uuid);
+            LogService.log('contratos', 'delete', uuid, `Contrato eliminado: ${current?.contratoId || 'Desconocido'}`);
+            return true;
+        }
+        throw new Error(res.error || 'Error al eliminar contrato');
     };
 
     const getContratosStats = () => {
@@ -323,8 +424,10 @@ const DataService = (() => {
         if (res.success) {
             const item = normalizeSupabaseData('equipos', res.data);
             cache.equipos.unshift(item);
+            LogService.log('equipos', 'create', item.id, `Equipo creado: ${item.nombreEquipo}`, { codigo: item.equipoId });
             return item;
         }
+        throw new Error(res.error || 'Error al crear equipo');
     };
 
     const updateEquipo = async (id, data) => {
@@ -335,14 +438,22 @@ const DataService = (() => {
             const item = normalizeSupabaseData('equipos', res.data);
             const idx = cache.equipos.findIndex(e => e.id === uuid);
             if (idx !== -1) cache.equipos[idx] = { ...cache.equipos[idx], ...item };
+            LogService.log('equipos', 'update', uuid, `Equipo actualizado: ${item.nombreEquipo}`);
+            return true;
         }
+        throw new Error(res.error || 'Error al actualizar equipo');
     };
 
     const deleteEquipo = async (id) => {
         const current = getEquipoById(id);
         const uuid = current ? current.id : id;
         const res = await SupabaseDataService.deleteEquipo(uuid);
-        if (res.success) cache.equipos = cache.equipos.filter(e => e.id !== uuid);
+        if (res.success) {
+            cache.equipos = cache.equipos.filter(e => e.id !== uuid);
+            LogService.log('equipos', 'delete', uuid, `Equipo eliminado: ${current?.nombreEquipo || 'Desconocido'}`);
+            return true;
+        }
+        throw new Error(res.error || 'Error al eliminar equipo');
     };
 
     const getEquiposStats = () => ({
@@ -364,6 +475,12 @@ const DataService = (() => {
     };
     const getVisitaById = (id) => cache.visitas.find(v => v.visitaId === id || v.id === id);
     const getVisitasByCliente = (clienteId) => cache.visitas.filter(v => v.clienteId === clienteId);
+    const getVisitasByMonth = (year, month) => {
+        return cache.visitas.filter(v => {
+            const fecha = new Date(v.fechaInicio);
+            return fecha.getFullYear() === year && fecha.getMonth() === month;
+        });
+    };
 
     // Estos quedan pendientes de impl completa en SupabaseService
     const createVisita = () => console.log('Create visita pending backend');
@@ -373,7 +490,10 @@ const DataService = (() => {
 
     // ========== HELPERS GENERALES ==========
     const getConfig = () => ({ ...cache.config });
-    const updateConfig = (cfg) => { cache.config = { ...cache.config, ...cfg }; };
+    const updateConfig = (cfg) => {
+        cache.config = { ...cache.config, ...cfg };
+        LogService.log('configuracion', 'update', 'system', 'Configuración actualizada', cfg);
+    };
 
     // Auth Placeholders
     const authenticateUser = () => null;
@@ -387,7 +507,11 @@ const DataService = (() => {
     // Permissions
     const getPermissions = () => cache.permissions;
     const getRolePermissions = (role) => cache.permissions[role];
-    const updateRolePermissions = () => { };
+    const updateRolePermissions = (role, permissions) => {
+        cache.permissions[role] = permissions;
+        LogService.log('configuracion', 'update', role, `Permisos actualizados para rol ${role}`);
+        return true;
+    };
     const canPerformAction = (role, module, action) => cache.permissions[role]?.[module]?.[action] || false;
     const getAvailableRoles = () => Object.keys(cache.permissions);
 
@@ -458,12 +582,15 @@ const DataService = (() => {
     const createProducto = (data) => {
         const producto = { ...data, productoId: `PROD-${Date.now()}`, id: `PROD-${Date.now()}` };
         cache.productos.unshift(producto);
+        LogService.log('productos', 'create', producto.id, `Producto creado: ${producto.nombre}`, { codigo: producto.productoId });
         return producto;
     };
     const updateProducto = (id, data) => {
         const idx = cache.productos.findIndex(p => p.productoId === id || p.id === id);
         if (idx !== -1) {
-            cache.productos[idx] = { ...cache.productos[idx], ...data };
+            const current = cache.productos[idx];
+            cache.productos[idx] = { ...current, ...data };
+            LogService.log('productos', 'update', id, `Producto actualizado: ${current.nombre}`);
             return true;
         }
         return false;
@@ -471,7 +598,9 @@ const DataService = (() => {
     const deleteProducto = (id) => {
         const idx = cache.productos.findIndex(p => p.productoId === id || p.id === id);
         if (idx !== -1) {
+            const current = cache.productos[idx];
             cache.productos.splice(idx, 1);
+            LogService.log('productos', 'delete', id, `Producto eliminado: ${current.nombre}`);
             return true;
         }
         return false;
@@ -602,6 +731,8 @@ const DataService = (() => {
 
     return {
         init,
+        refreshData,
+        isRefreshing: () => isRefreshing,
         handleRealtimeUpdate,
 
         // Clientes
@@ -614,7 +745,7 @@ const DataService = (() => {
         getEquiposSync, getEquiposFiltered, getEquipoById, getEquiposByCliente, createEquipo, updateEquipo, deleteEquipo, getEquiposStats, getHistorialEquipo,
 
         // Visitas
-        getVisitasSync, getVisitasFiltered, getVisitaById, getVisitasByCliente, createVisita, updateVisita, deleteVisita, getVisitasStats,
+        getVisitasSync, getVisitasFiltered, getVisitaById, getVisitasByCliente, getVisitasByMonth, createVisita, updateVisita, deleteVisita, getVisitasStats,
 
         // Config & Auth
         getConfig, updateConfig, getUsers, getUsersSync, getUserByUsername, createUser, updateUser, deleteUser, authenticateUser,

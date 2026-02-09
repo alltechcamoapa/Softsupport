@@ -15,6 +15,7 @@ const App = (() => {
       { id: 'clientes', label: 'Clientes', icon: Icons.users },
       { id: 'contratos', label: 'Contratos', icon: Icons.fileText },
       { id: 'visitas', label: 'Visitas / Servicios', icon: Icons.wrench },
+      { id: 'pedidos', label: 'Pedidos', icon: Icons.shoppingCart },
       { id: 'proformas', label: 'Proformas', icon: Icons.fileText },
       { id: 'productos', label: 'Productos / Servicios', icon: Icons.package },
       { id: 'equipos', label: 'Equipos', icon: Icons.monitor },
@@ -99,6 +100,7 @@ const App = (() => {
       clientes: 'Clientes',
       contratos: 'Contratos',
       visitas: 'Visitas / Servicios',
+      pedidos: 'Pedidos',
       proformas: 'Proformas / Cotizaciones',
       productos: 'Productos y Servicios',
       equipos: 'Equipos',
@@ -123,6 +125,11 @@ const App = (() => {
         </div>
         
         <div class="header__actions">
+          <!-- Refresh Button -->
+          <button class="header__action-btn header__refresh-btn" id="refreshDataBtn" onclick="App.handleRefreshData()" title="Sincronizar datos">
+            ${Icons.refreshCw}
+          </button>
+          
           <div class="dropdown">
             <button class="header__action-btn notification-bell ${(typeof NotificationService !== 'undefined' && NotificationService.getUnreadCount() > 0) ? 'has-notifications' : ''}" id="notificationsBtn" onclick="App.toggleNotifications()">
               ${Icons.bell}
@@ -733,6 +740,9 @@ const App = (() => {
       case 'proformas':
         moduleContent = ProformasModule.render();
         break;
+      case 'pedidos':
+        moduleContent = PedidosModule.render();
+        break;
       case 'productos':
         moduleContent = ProductosModule.render();
         break;
@@ -757,12 +767,14 @@ const App = (() => {
 
     appContainer.innerHTML = `
       ${renderSidebar()}
+      <div class="sidebar-overlay" id="sidebarOverlay"></div>
       <main class="main">
         ${renderHeader()}
         <div class="content">
           ${moduleContent}
         </div>
       </main>
+      ${renderBottomNav()}
     `;
 
     // Initialize chart after render
@@ -776,15 +788,78 @@ const App = (() => {
     attachEventListeners();
   };
 
+  // ========== BOTTOM NAVIGATION (Mobile PWA) ==========
+  const renderBottomNav = () => {
+    const currentModule = State.get('currentModule');
+    const user = State.get('user');
+    if (!user) return '';
+
+    // Core navigation items for bottom nav
+    const navItems = [
+      { id: 'dashboard', label: 'Inicio', icon: Icons.home },
+      { id: 'clientes', label: 'Clientes', icon: Icons.users },
+      { id: 'visitas', label: 'Servicios', icon: Icons.wrench },
+      { id: 'calendario', label: 'Agenda', icon: Icons.calendar },
+      { id: 'menu', label: 'Menú', icon: Icons.menu, isMenu: true }
+    ];
+
+    return `
+      <nav class="pwa-bottom-nav" id="bottomNav">
+        ${navItems.map(item => `
+          <a href="#${item.id}" 
+             class="pwa-bottom-nav__item ${currentModule === item.id ? 'pwa-bottom-nav__item--active' : ''}"
+             data-module="${item.id}"
+             ${item.isMenu ? 'onclick="App.toggleSidebar(); return false;"' : ''}>
+            <span class="pwa-bottom-nav__icon">${item.icon}</span>
+            <span class="pwa-bottom-nav__label">${item.label}</span>
+          </a>
+        `).join('')}
+      </nav>
+    `;
+  };
+
+  // ========== SIDEBAR TOGGLE ==========
+  const toggleSidebar = () => {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+
+    if (sidebar) {
+      sidebar.classList.toggle('open');
+    }
+    if (overlay) {
+      overlay.classList.toggle('active');
+    }
+  };
+
+  const closeSidebar = () => {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+
+    if (sidebar) sidebar.classList.remove('open');
+    if (overlay) overlay.classList.remove('active');
+  };
+
   // ========== EVENT LISTENERS ==========
 
   const attachEventListeners = () => {
-    // Navigation links
+    // Navigation links (sidebar)
     document.querySelectorAll('.sidebar__menu-link').forEach(link => {
       link.addEventListener('click', (e) => {
         e.preventDefault();
         const module = link.dataset.module;
+        closeSidebar(); // Close sidebar after navigation on mobile
         navigate(module);
+      });
+    });
+
+    // Bottom navigation links
+    document.querySelectorAll('.pwa-bottom-nav__item:not([onclick])').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const module = link.dataset.module;
+        if (module && module !== 'menu') {
+          navigate(module);
+        }
       });
     });
 
@@ -797,11 +872,20 @@ const App = (() => {
       });
     }
 
-    // Mobile menu toggle
+    // Mobile menu toggle (hamburger button)
     const menuToggle = document.getElementById('menuToggle');
     if (menuToggle) {
-      menuToggle.addEventListener('click', () => {
-        document.getElementById('sidebar').classList.toggle('open');
+      menuToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleSidebar();
+      });
+    }
+
+    // Sidebar overlay click to close
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+    if (sidebarOverlay) {
+      sidebarOverlay.addEventListener('click', () => {
+        closeSidebar();
       });
     }
 
@@ -810,16 +894,11 @@ const App = (() => {
       const notifDropdown = document.getElementById('notificationsDropdown');
       const notifBtn = document.getElementById('notificationsBtn');
       const userDropdown = document.getElementById('userDropdown');
-      const userBtn = document.querySelector('.header__avatar-btn'); // Adjusted selector
+      const userBtn = document.querySelector('.header__avatar-btn');
 
       if (notifDropdown && notifBtn && !notifDropdown.contains(e.target) && !notifBtn.contains(e.target)) {
         notifDropdown.classList.remove('show');
       }
-
-      // This logic needs to be robust. 
-      // The button click handler might toggle it immediately back on if we are not careful.
-      // But since we use onclick on the button, this specific listener is for clicking OUTSIDE.
-      // So we check if click target is NOT the button and NOT the dropdown.
 
       if (userDropdown && userBtn && !userDropdown.contains(e.target) && !userBtn.contains(e.target)) {
         userDropdown.classList.remove('show');
@@ -877,6 +956,16 @@ const App = (() => {
         }
       }, 250);
     });
+
+    // Listen for Service Worker messages (Push Notification Clicks)
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', event => {
+        if (event.data && event.data.type === 'NAVIGATE_TO') {
+          console.log('🔔 Navegando desde notificación:', event.data.module);
+          navigate(event.data.module);
+        }
+      });
+    }
 
     console.log('ALLTECH initialized');
   };
@@ -950,6 +1039,47 @@ const App = (() => {
     }, 3000);
   };
 
+  // ========== REFRESH DATA HANDLER ==========
+
+  const handleRefreshData = async () => {
+    const refreshBtn = document.getElementById('refreshDataBtn');
+
+    // Avoid multiple simultaneous refreshes
+    if (DataService.isRefreshing && DataService.isRefreshing()) {
+      showNotification('Sincronización en progreso...', 'info');
+      return;
+    }
+
+    // Add spinning animation
+    if (refreshBtn) {
+      refreshBtn.classList.add('refreshing');
+      refreshBtn.disabled = true;
+    }
+
+    try {
+      showNotification('Sincronizando datos...', 'info');
+
+      const success = await DataService.refreshData();
+
+      if (success) {
+        showNotification('¡Datos actualizados!', 'success');
+        // Re-render current module with fresh data
+        render();
+      } else {
+        showNotification('Error al actualizar datos', 'error');
+      }
+    } catch (error) {
+      console.error('Error en handleRefreshData:', error);
+      showNotification('Error de conexión', 'error');
+    } finally {
+      // Remove spinning animation
+      if (refreshBtn) {
+        refreshBtn.classList.remove('refreshing');
+        refreshBtn.disabled = false;
+      }
+    }
+  };
+
   // ========== PUBLIC API ==========
   return {
     init,
@@ -960,7 +1090,10 @@ const App = (() => {
     handleSwitchUser,
     toggleUserMenu,
     toggleNotifications,
-    showNotification
+    showNotification,
+    handleRefreshData,
+    toggleSidebar,
+    closeSidebar
   };
 })();
 

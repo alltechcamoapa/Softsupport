@@ -99,7 +99,16 @@ const SupabaseDataService = (() => {
 
         // Generar código si no existe
         if (!clienteData.codigo_cliente) {
-            clienteData.codigo_cliente = await generateCode('clientes');
+            // Intentar generar código vía RPC
+            let codigo = await generateCode('clientes');
+
+            // Fallback: generar código local si RPC falla
+            if (!codigo) {
+                console.warn('⚠️ RPC generateCode falló, usando fallback local');
+                codigo = 'CLI' + Date.now().toString().slice(-6);
+            }
+
+            clienteData.codigo_cliente = codigo;
         }
 
         // Agregar usuario actual
@@ -108,6 +117,8 @@ const SupabaseDataService = (() => {
             clienteData.created_by = user.id;
         }
 
+        console.log('📤 Creando cliente con datos:', clienteData);
+
         const { data, error } = await client
             .from('clientes')
             .insert([clienteData])
@@ -115,9 +126,11 @@ const SupabaseDataService = (() => {
             .single();
 
         if (error) {
+            console.error('❌ Error en createCliente:', error);
             return { error: handleSupabaseError(error, 'createCliente') };
         }
 
+        console.log('✅ Cliente creado:', data);
         return { data, success: true };
     };
 
@@ -230,14 +243,25 @@ const SupabaseDataService = (() => {
     const createContrato = async (contratoData) => {
         if (!client) return { error: 'Not initialized' };
 
+        // Generar código si no existe
         if (!contratoData.codigo_contrato) {
-            contratoData.codigo_contrato = await generateCode('contratos');
+            let codigo = await generateCode('contratos');
+
+            // Fallback (RPC falló)
+            if (!codigo) {
+                console.warn('⚠️ RPC generateCode falló para contratos, usando fallback local');
+                codigo = 'CON' + Date.now().toString().slice(-6);
+            }
+            contratoData.codigo_contrato = codigo;
         }
 
+        // Agregar usuario actual
         const user = await getCurrentUser();
         if (user) {
             contratoData.created_by = user.id;
         }
+
+        console.log('📤 Creando contrato con datos:', contratoData);
 
         const { data, error } = await client
             .from('contratos')
@@ -246,9 +270,11 @@ const SupabaseDataService = (() => {
             .single();
 
         if (error) {
+            console.error('❌ Error en createContrato:', error);
             return { error: handleSupabaseError(error, 'createContrato') };
         }
 
+        console.log('✅ Contrato creado:', data);
         return { data, success: true };
     };
 
@@ -361,14 +387,25 @@ const SupabaseDataService = (() => {
     const createEquipo = async (equipoData) => {
         if (!client) return { error: 'Not initialized' };
 
+        // Generar código si no existe
         if (!equipoData.codigo_equipo) {
-            equipoData.codigo_equipo = await generateCode('equipos');
+            let codigo = await generateCode('equipos');
+
+            // Fallback (RPC falló)
+            if (!codigo) {
+                console.warn('⚠️ RPC generateCode falló para equipos, usando fallback local');
+                codigo = 'EQU' + Date.now().toString().slice(-6);
+            }
+            equipoData.codigo_equipo = codigo;
         }
 
+        // Agregar usuario actual
         const user = await getCurrentUser();
         if (user) {
             equipoData.created_by = user.id;
         }
+
+        console.log('📤 Creando equipo con datos:', equipoData);
 
         const { data, error } = await client
             .from('equipos')
@@ -377,9 +414,11 @@ const SupabaseDataService = (() => {
             .single();
 
         if (error) {
+            console.error('❌ Error en createEquipo:', error);
             return { error: handleSupabaseError(error, 'createEquipo') };
         }
 
+        console.log('✅ Equipo creado:', data);
         return { data, success: true };
     };
 

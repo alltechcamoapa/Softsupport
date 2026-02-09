@@ -70,7 +70,7 @@ const EXTERNAL_RESOURCES = [
 // Install: Cache essential assets
 self.addEventListener('install', event => {
   console.log('🔧 Service Worker: Installing...');
-  
+
   event.waitUntil(
     caches.open(STATIC_CACHE)
       .then(cache => {
@@ -93,7 +93,7 @@ self.addEventListener('install', event => {
 // Activate: Clean old caches and claim clients
 self.addEventListener('activate', event => {
   console.log('🚀 Service Worker: Activating...');
-  
+
   event.waitUntil(
     caches.keys()
       .then(cacheNames => {
@@ -118,38 +118,38 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const { request } = event;
   const url = new URL(request.url);
-  
+
   // Skip non-GET requests
   if (request.method !== 'GET') {
     return;
   }
-  
+
   // Skip WebSocket and Supabase API requests (always network)
-  if (url.protocol === 'wss:' || 
-      url.hostname.includes('supabase') ||
-      url.pathname.includes('/rest/') ||
-      url.pathname.includes('/auth/')) {
+  if (url.protocol === 'wss:' ||
+    url.hostname.includes('supabase') ||
+    url.pathname.includes('/rest/') ||
+    url.pathname.includes('/auth/')) {
     return;
   }
-  
+
   // Strategy: Stale-While-Revalidate for HTML and JS
-  if (request.destination === 'document' || 
-      request.destination === 'script' ||
-      url.pathname.endsWith('.html') ||
-      url.pathname.endsWith('.js')) {
+  if (request.destination === 'document' ||
+    request.destination === 'script' ||
+    url.pathname.endsWith('.html') ||
+    url.pathname.endsWith('.js')) {
     event.respondWith(staleWhileRevalidate(request));
     return;
   }
-  
+
   // Strategy: Cache-First for static assets (CSS, images, fonts)
   if (request.destination === 'style' ||
-      request.destination === 'image' ||
-      request.destination === 'font' ||
-      url.pathname.match(/\.(css|png|jpg|jpeg|gif|svg|woff2?|ttf|eot)$/)) {
+    request.destination === 'image' ||
+    request.destination === 'font' ||
+    url.pathname.match(/\.(css|png|jpg|jpeg|gif|svg|woff2?|ttf|eot)$/)) {
     event.respondWith(cacheFirst(request));
     return;
   }
-  
+
   // Strategy: Network-First for everything else
   event.respondWith(networkFirst(request));
 });
@@ -165,7 +165,7 @@ async function cacheFirst(request) {
   if (cachedResponse) {
     return cachedResponse;
   }
-  
+
   try {
     const networkResponse = await fetch(request);
     if (networkResponse.ok) {
@@ -208,7 +208,7 @@ async function networkFirst(request) {
 async function staleWhileRevalidate(request) {
   const cache = await caches.open(DYNAMIC_CACHE);
   const cachedResponse = await caches.match(request);
-  
+
   // Fetch in background
   const fetchPromise = fetch(request)
     .then(networkResponse => {
@@ -221,7 +221,7 @@ async function staleWhileRevalidate(request) {
       console.warn('📴 Stale-While-Revalidate: Network failed:', error);
       return cachedResponse || new Response('Offline', { status: 503 });
     });
-  
+
   // Return cached immediately if available, else wait for network
   return cachedResponse || fetchPromise;
 }
@@ -230,7 +230,7 @@ async function staleWhileRevalidate(request) {
 
 self.addEventListener('sync', event => {
   console.log('🔄 Background Sync triggered:', event.tag);
-  
+
   if (event.tag === 'sync-data') {
     event.waitUntil(syncPendingData());
   }
@@ -244,49 +244,68 @@ async function syncPendingData() {
 
 // ===== PUSH NOTIFICATIONS =====
 
+// ===== PUSH NOTIFICATIONS =====
+
 self.addEventListener('push', event => {
-  const data = event.data?.json() || {
-    title: 'ALLTECH Support',
-    body: 'Tienes una nueva notificación',
-    icon: '/assets/icons/icon-192x192.png'
-  };
-  
+  let data = {};
+
+  if (event.data) {
+    try {
+      data = event.data.json();
+    } catch (e) {
+      data = { title: 'Nueva Notificación', body: event.data.text() };
+    }
+  } else {
+    data = { title: 'ALLTECH Support', body: 'Tienes una nueva notificación' };
+  }
+
   const options = {
-    body: data.body,
+    body: data.body || 'Nuevo mensaje del sistema',
     icon: data.icon || '/assets/icons/icon-192x192.png',
-    badge: '/assets/icons/badge-72x72.png',
+    badge: '/assets/icons/icon-72x72.png',
     vibrate: [100, 50, 100],
-    data: data.data || {},
-    actions: data.actions || [
-      { action: 'open', title: 'Abrir' },
-      { action: 'close', title: 'Cerrar' }
-    ]
+    data: data.data || { url: '/' },
+    tag: data.tag || 'generic-notification',
+    renotify: data.tag ? true : false,
+    actions: data.actions || []
   };
-  
+
   event.waitUntil(
-    self.registration.showNotification(data.title, options)
+    self.registration.showNotification(data.title || 'ALLTECH Support', options)
   );
 });
 
 self.addEventListener('notificationclick', event => {
   event.notification.close();
-  
+
   if (event.action === 'close') {
     return;
   }
-  
+
+  const urlToOpen = event.notification.data.url || '/';
+
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
-      .then(clientList => {
-        // Focus existing window if available
-        for (const client of clientList) {
-          if (client.url.includes(self.location.origin) && 'focus' in client) {
-            return client.focus();
+      .then(windowClients => {
+        // Check if there is already a window/tab open with the target URL
+        for (let i = 0; i < windowClients.length; i++) {
+          const client = windowClients[i];
+          // If URL matches base origin, focus it and navigate
+          if (client.url.startsWith(self.location.origin) && 'focus' in client) {
+            client.focus();
+            // Send message to app to navigate internally if possible
+            if (urlToOpen !== '/') {
+              client.postMessage({
+                type: 'NAVIGATE_TO',
+                module: urlToOpen.replace('/', '').replace('#', '')
+              });
+            }
+            return;
           }
         }
-        // Open new window
+        // If no window is open, open a new one
         if (clients.openWindow) {
-          return clients.openWindow('/');
+          return clients.openWindow(urlToOpen);
         }
       })
   );
@@ -296,16 +315,16 @@ self.addEventListener('notificationclick', event => {
 
 self.addEventListener('message', event => {
   const { type, payload } = event.data || {};
-  
+
   switch (type) {
     case 'SKIP_WAITING':
       self.skipWaiting();
       break;
-      
+
     case 'GET_VERSION':
       event.ports[0]?.postMessage({ version: CACHE_NAME });
       break;
-      
+
     case 'CLEAR_CACHE':
       caches.keys().then(names => {
         names.forEach(name => caches.delete(name));
@@ -313,7 +332,7 @@ self.addEventListener('message', event => {
         event.ports[0]?.postMessage({ success: true });
       });
       break;
-      
+
     default:
       console.log('📨 Unknown message:', type);
   }

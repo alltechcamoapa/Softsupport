@@ -505,26 +505,42 @@ const ClientesModule = (() => {
     App.refreshCurrentModule();
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     const formData = new FormData(event.target);
-    const data = Object.fromEntries(formData.entries());
+    const rawData = Object.fromEntries(formData.entries());
 
     // Auto-fill empresa with client name if left empty
-    if (!data.empresa || data.empresa.trim() === '') {
-      data.empresa = data.nombreCliente;
+    if (!rawData.empresa || rawData.empresa.trim() === '') {
+      rawData.empresa = rawData.nombreCliente;
     }
 
-    if (data.clienteId) {
-      DataService.updateCliente(data.clienteId, data);
-    } else {
-      data.clienteId = 'CLI' + String(Date.now()).slice(-6);
-      data.fechaCreacion = new Date().toISOString().split('T')[0];
-      DataService.createCliente(data);
-    }
+    // Mapear camelCase (UI) a snake_case (DB)
+    const data = {
+      nombre_cliente: rawData.nombreCliente,
+      empresa: rawData.empresa,
+      telefono: rawData.telefono,
+      correo: rawData.correo || null,
+      direccion: rawData.direccion || null,
+      estado: rawData.estado || 'Activo'
+    };
 
-    closeModal();
-    App.refreshCurrentModule();
+    try {
+      if (rawData.clienteId && rawData.clienteId.trim() !== '') {
+        // Actualizar cliente existente
+        await DataService.updateCliente(rawData.clienteId, data);
+        console.log('✅ Cliente actualizado correctamente');
+      } else {
+        // Crear nuevo cliente
+        await DataService.createCliente(data);
+        console.log('✅ Cliente creado correctamente');
+      }
+      closeModal();
+      App.refreshCurrentModule();
+    } catch (error) {
+      console.error('❌ Error al guardar cliente:', error);
+      alert('Error al guardar el cliente: ' + (error.message || 'Error desconocido'));
+    }
   };
 
   // ========== MODAL ACTIONS ==========
@@ -554,10 +570,16 @@ const ClientesModule = (() => {
     }
   };
 
-  const deleteCliente = (clienteId) => {
-    DataService.deleteCliente(clienteId);
-    closeModal();
-    App.refreshCurrentModule();
+  const deleteCliente = async (clienteId) => {
+    try {
+      await DataService.deleteCliente(clienteId);
+      console.log('✅ Cliente eliminado correctamente');
+      closeModal();
+      App.refreshCurrentModule();
+    } catch (error) {
+      console.error('❌ Error al eliminar cliente:', error);
+      alert('Error al eliminar el cliente: ' + (error.message || 'Error desconocido'));
+    }
   };
 
   const closeModal = (event) => {

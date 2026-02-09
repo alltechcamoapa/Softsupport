@@ -45,6 +45,11 @@
         height: 24px !important;
     }
 
+    .sidebar__menu-icon svg {
+        width: 22px !important;
+        height: 22px !important;
+    }
+
     /* Larger header elements */
     .header__title {
         font-size: var(--font-size-xl);
@@ -55,11 +60,21 @@
         height: 48px;
     }
 
+    .header__action-btn svg {
+        width: 22px !important;
+        height: 22px !important;
+    }
+
     /* Bigger buttons for touch */
     .btn {
         min-height: 48px;
         padding: var(--spacing-md) var(--spacing-lg);
         font-size: var(--font-size-md);
+    }
+
+    .btn svg {
+        width: 18px !important;
+        height: 18px !important;
     }
 
     .btn--sm {
@@ -71,6 +86,11 @@
     .btn--icon {
         width: 48px;
         height: 48px;
+    }
+
+    .btn--icon svg {
+        width: 22px !important;
+        height: 22px !important;
     }
 
     /* Table touch-friendly */
@@ -98,6 +118,11 @@
         width: 56px !important;
         height: 56px !important;
     }
+
+    .stat-card__icon svg {
+        width: 28px !important;
+        height: 28px !important;
+    }
 }
 
 /* ========== SMARTPHONE OPTIMIZATIONS (< 768px) ========== */
@@ -122,9 +147,9 @@
 
     /* ===== HEADER OPTIMIZATIONS ===== */
     .header {
-        height: 64px;
-        /* Taller header */
-        padding: 0 var(--spacing-sm);
+        height: 60px;
+        padding: 0 var(--spacing-md);
+        gap: var(--spacing-sm);
     }
 
     .header__title {
@@ -133,41 +158,44 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        flex: 1;
+        text-align: left;
     }
 
     .header__menu-btn {
-        width: 44px;
-        height: 44px;
+        width: 40px;
+        height: 40px;
         display: flex !important;
         align-items: center;
         justify-content: center;
-        margin-right: var(--spacing-sm);
+        margin-right: var(--spacing-xs);
+        border-radius: var(--border-radius-md);
     }
 
     .header__menu-btn svg {
-        width: 24px;
-        height: 24px;
-    }
-
-    .header__action-btn {
-        width: 44px;
-        height: 44px;
-    }
-
-    .header__action-btn svg {
         width: 22px;
         height: 22px;
     }
 
-    .header__avatar {
+    .header__action-btn {
         width: 40px;
         height: 40px;
     }
 
+    .header__action-btn svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .header__avatar {
+        width: 32px;
+        height: 32px;
+    }
+
     .header__avatar-btn {
         padding: 0;
-        width: 44px;
-        height: 44px;
+        width: 36px;
+        height: 36px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -176,27 +204,39 @@
     /* ===== SIDEBAR OPTIMIZATIONS ===== */
     .sidebar {
         width: 280px;
-        /* Wider on mobile for easier touch */
+        box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
     }
 
     .sidebar__menu-link {
         padding: var(--spacing-md) var(--spacing-lg);
         font-size: var(--font-size-md);
         min-height: 52px;
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-md);
     }
 
     .sidebar__menu-icon {
-        width: 26px !important;
-        height: 26px !important;
+        width: 24px !important;
+        height: 24px !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .sidebar__menu-icon svg {
+        width: 22px !important;
+        height: 22px !important;
     }
 
     .sidebar__user {
-        padding: var(--spacing-lg);
+        padding: var(--spacing-md) var(--spacing-lg);
     }
 
     .sidebar__user-avatar {
-        width: 48px;
-        height: 48px;
+        width: 40px;
+        height: 40px;
     }
 
     .sidebar__user-name {
@@ -205,81 +245,81 @@
 
     /* ===== CONTENT OPTIMIZATIONS ===== */
     .content {
-        padding: var(--spacing-md);
+        padding: var(--spacing-sm);
     }
 
     /* Larger module titles */
     .module-title {
-        font-size: var(--font-size-xl);
+        font-size: var(--font-size-lg);
     }
 
     .module-subtitle {
-        font-size: var(--font-size-md);
+        font-size: var(--font-size-sm);
     }
 
     /* ===== BUTTON OPTIMIZATIONS ===== */
     .btn {
-        min-height: 50px;
-        padding: var(--spacing-md) var(--spacing-xl);
-        font-size: var(--font-size-md);
-        font-weight: 600;
-        border-radius: var(--border-radius-lg);
+        min-height: 40px;
+        padding: var(--spacing-sm) var(--spacing-md);
+        font-size: var(--font-size-sm);
+        font-weight: 500;
+        border-radius: var(--border-radius-md);
     }
 
     .btn--sm {
-        min-height: 44px;
-        padding: var(--spacing-sm) var(--spacing-lg);
-        font-size: var(--font-size-sm);
+        min-height: 32px;
+        padding: var(--spacing-xs) var(--spacing-sm);
+        font-size: var(--font-size-xs);
     }
 
     .btn--lg {
-        min-height: 56px;
-        padding: var(--spacing-lg) var(--spacing-2xl);
-        font-size: var(--font-size-lg);
+        min-height: 48px;
+        padding: var(--spacing-md) var(--spacing-lg);
+        font-size: var(--font-size-md);
     }
 
     .btn--icon {
-        width: 50px;
-        height: 50px;
+        width: 36px;
+        height: 36px;
     }
 
     .btn--icon svg {
-        width: 24px;
-        height: 24px;
+        width: 20px;
+        height: 20px;
     }
 
     /* Button text on mobile should be clearer */
     .btn--ghost {
-        background: var(--bg-tertiary);
+        background: transparent;
     }
 
     /* ===== FORM OPTIMIZATIONS ===== */
     input,
     textarea,
     select {
-        min-height: 50px;
-        padding: var(--spacing-md) var(--spacing-lg);
-        font-size: var(--font-size-md);
-        border-radius: var(--border-radius-lg);
+        min-height: 40px;
+        padding: var(--spacing-sm) var(--spacing-md);
+        font-size: var(--font-size-sm);
+        border-radius: var(--border-radius-md);
     }
 
     textarea {
-        min-height: 120px;
+        min-height: 100px;
     }
 
     .form-label {
-        font-size: var(--font-size-md);
-        font-weight: 600;
-        margin-bottom: var(--spacing-sm);
+        font-size: var(--font-size-sm);
+        font-weight: 500;
+        margin-bottom: var(--spacing-xs);
     }
 
     /* ===== TABLE OPTIMIZATIONS ===== */
     .data-table {
-        font-size: var(--font-size-sm);
+        font-size: var(--font-size-xs);
     }
 
     .data-table th {
-        padding: var(--spacing-md);
+        padding: var(--spacing-sm);
         font-size: var(--font-size-xs);
         text-transform: uppercase;
         letter-spacing: 0.5px;
@@ -290,63 +330,63 @@
     }
 
     .data-table td {
-        padding: var(--spacing-md);
+        padding: var(--spacing-sm);
         font-size: var(--font-size-sm);
     }
 
     /* Make action buttons in tables bigger */
     .data-table .btn--icon {
-        width: 40px;
-        height: 40px;
+        width: 32px;
+        height: 32px;
     }
 
     /* ===== CARD OPTIMIZATIONS ===== */
     .card {
-        border-radius: var(--border-radius-xl);
-        margin-bottom: var(--spacing-lg);
+        border-radius: var(--border-radius-lg);
+        margin-bottom: var(--spacing-md);
     }
 
     .card__header {
-        padding: var(--spacing-lg);
+        padding: var(--spacing-md);
     }
 
     .card__title {
-        font-size: var(--font-size-lg);
-        font-weight: 700;
+        font-size: var(--font-size-md);
+        font-weight: 600;
     }
 
     .card__title svg {
-        width: 24px;
-        height: 24px;
+        width: 20px;
+        height: 20px;
     }
 
     .card__body {
-        padding: var(--spacing-lg);
+        padding: var(--spacing-md);
     }
 
     /* ===== STATS CARDS ===== */
     .stat-card {
-        padding: var(--spacing-lg);
+        padding: var(--spacing-md);
     }
 
     .stat-card__icon {
-        width: 48px !important;
-        height: 48px !important;
+        width: 40px !important;
+        height: 40px !important;
     }
 
     .stat-card__icon svg {
-        width: 28px;
-        height: 28px;
+        width: 24px;
+        height: 24px;
     }
 
     .stat-card__label {
-        font-size: var(--font-size-sm);
-        margin-top: var(--spacing-sm);
+        font-size: var(--font-size-xs);
+        margin-top: var(--spacing-xs);
     }
 
     .stat-card__value {
-        font-size: 2rem !important;
-        margin-top: var(--spacing-xs);
+        font-size: 1.5rem !important;
+        margin-top: 0;
     }
 
     .stat-card__period {
@@ -354,13 +394,13 @@
     }
 
     .stat-card__trend {
-        font-size: var(--font-size-sm);
+        font-size: var(--font-size-xs);
     }
 
     /* ===== BADGE OPTIMIZATIONS ===== */
     .badge {
-        padding: 6px 12px;
-        font-size: var(--font-size-sm);
+        padding: 4px 8px;
+        font-size: 11px;
         font-weight: 600;
         border-radius: var(--border-radius-full);
     }
@@ -369,89 +409,89 @@
     .modal {
         width: 95%;
         max-width: 500px;
-        border-radius: var(--border-radius-xl);
+        border-radius: var(--border-radius-lg);
     }
 
     .modal__header {
-        padding: var(--spacing-lg);
+        padding: var(--spacing-md);
     }
 
     .modal__title {
-        font-size: var(--font-size-xl);
+        font-size: var(--font-size-lg);
     }
 
     .modal__close {
-        width: 44px;
-        height: 44px;
+        width: 36px;
+        height: 36px;
     }
 
     .modal__close svg {
-        width: 24px;
-        height: 24px;
+        width: 20px;
+        height: 20px;
     }
 
     .modal__body {
-        padding: var(--spacing-lg);
+        padding: var(--spacing-md);
     }
 
     .modal__footer {
-        padding: var(--spacing-lg);
-        gap: var(--spacing-md);
+        padding: var(--spacing-md);
+        gap: var(--spacing-sm);
     }
 
     /* ===== DROPDOWN OPTIMIZATIONS ===== */
     .dropdown__menu {
-        font-size: var(--font-size-md);
-        border-radius: var(--border-radius-lg);
+        font-size: var(--font-size-sm);
+        border-radius: var(--border-radius-md);
     }
 
     .dropdown__item {
-        padding: var(--spacing-md) var(--spacing-lg);
-        min-height: 48px;
+        padding: var(--spacing-sm) var(--spacing-md);
+        min-height: 40px;
         display: flex;
         align-items: center;
     }
 
     .dropdown__item svg {
-        width: 22px;
-        height: 22px;
-        margin-right: var(--spacing-md);
+        width: 18px;
+        height: 18px;
+        margin-right: var(--spacing-sm);
     }
 
     /* ===== NOTIFICATION OPTIMIZATIONS ===== */
     .notification-item {
-        padding: var(--spacing-md);
-        min-height: 64px;
+        padding: var(--spacing-sm);
+        min-height: 50px;
     }
 
     .notification-icon {
-        width: 40px;
-        height: 40px;
+        width: 32px;
+        height: 32px;
     }
 
     .notification-icon svg {
-        width: 22px;
-        height: 22px;
+        width: 18px;
+        height: 18px;
     }
 
     .notification-title {
-        font-size: var(--font-size-md);
+        font-size: var(--font-size-sm);
     }
 
     .notification-time {
-        font-size: var(--font-size-sm);
+        font-size: var(--font-size-xs);
     }
 
     /* ===== EMPTY STATE OPTIMIZATIONS ===== */
     .empty-state__icon {
-        width: 80px;
-        height: 80px;
-        font-size: 3rem;
+        width: 60px;
+        height: 60px;
+        font-size: 2rem;
     }
 
     .empty-state__icon svg {
-        width: 64px;
-        height: 64px;
+        width: 40px;
+        height: 40px;
     }
 
     .empty-state__title {
@@ -521,19 +561,106 @@
     }
 
     /* ===== ICON SPRITES OPTIMIZATION ===== */
-    /* All SVG icons should scale proportionally */
+    /* Define consistent icon sizes for different contexts */
+
+    /* Default SVG behavior - inherit from parent */
     svg {
-        width: 100%;
-        height: 100%;
+        display: inline-block;
+        vertical-align: middle;
     }
 
-    /* Specific icon contexts */
-    .sidebar__menu-icon svg,
-    .header__action-btn svg,
-    .btn svg,
-    .card__title svg,
-    .module-header svg {
+    /* Header icons */
+    .header__action-btn svg {
+        width: 20px !important;
+        height: 20px !important;
+    }
+
+    /* Sidebar icons */
+    .sidebar__menu-icon svg {
+        width: 22px !important;
+        height: 22px !important;
+    }
+
+    /* Button icons */
+    .btn svg {
+        width: 16px !important;
+        height: 16px !important;
         flex-shrink: 0;
+    }
+
+    .btn--lg svg {
+        width: 20px !important;
+        height: 20px !important;
+    }
+
+    /* Card title icons */
+    .card__title svg {
+        width: 20px !important;
+        height: 20px !important;
+    }
+
+    /* Stat card icons */
+    .stat-card__icon svg {
+        width: 24px !important;
+        height: 24px !important;
+    }
+
+    /* Module header icons */
+    .module-header svg {
+        width: 24px !important;
+        height: 24px !important;
+    }
+
+    /* Table action icons */
+    .data-table .btn--icon svg {
+        width: 16px !important;
+        height: 16px !important;
+    }
+
+    /* Dropdown icons */
+    .dropdown__item svg {
+        width: 18px !important;
+        height: 18px !important;
+    }
+
+    /* Empty state icons */
+    .empty-state__icon svg {
+        width: 40px !important;
+        height: 40px !important;
+    }
+
+    /* Notification icons */
+    .notification-icon svg {
+        width: 18px !important;
+        height: 18px !important;
+    }
+
+    /* Generic icon wrapper */
+    .icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .icon--sm {
+        width: 16px;
+        height: 16px;
+    }
+
+    .icon--md {
+        width: 20px;
+        height: 20px;
+    }
+
+    .icon--lg {
+        width: 24px;
+        height: 24px;
+    }
+
+    .icon--xl {
+        width: 32px;
+        height: 32px;
     }
 }
 
