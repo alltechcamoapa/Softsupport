@@ -195,16 +195,31 @@ const LoginModule = (() => {
             console.log('✅ Usuario logueado:', user.name);
             showSuccess('✅ ¡Bienvenido ' + user.name + '!');
 
-            // Renderizar app después de 800ms
-            setTimeout(() => {
-                if (typeof App !== 'undefined' && App.render) {
-                    console.log('🎨 Renderizando aplicación...');
-                    App.render();
-                } else {
-                    console.error('❌ App.render not found');
-                    showError('❌ Error al cargar la app\nRecarga la página');
+            // Inicializar DataService y luego renderizar
+            setTimeout(async () => {
+                try {
+                    console.log('☁️ Cargando datos desde Supabase...');
+
+                    // Inicializar DataService ANTES de renderizar
+                    const dataLoaded = await DataService.init();
+                    if (!dataLoaded) {
+                        console.warn('⚠️ DataService cargó con datos parciales');
+                    }
+
+                    if (typeof App !== 'undefined' && App.render) {
+                        console.log('🎨 Renderizando aplicación...');
+                        App.render();
+                    } else {
+                        console.error('❌ App.render not found');
+                        showError('❌ Error al cargar la app\nRecarga la página');
+                        setLoading(false);
+                    }
+                } catch (error) {
+                    console.error('❌ Error cargando datos:', error);
+                    showError('❌ Error al cargar datos\n' + error.message);
+                    setLoading(false);
                 }
-            }, 800);
+            }, 500);
 
         } catch (error) {
             console.error('❌ Error en login:', error);
