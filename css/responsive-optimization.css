@@ -147,13 +147,13 @@
 
     /* ===== HEADER OPTIMIZATIONS ===== */
     .header {
-        height: 60px;
+        height: 56px;
         padding: 0 var(--spacing-md);
         gap: var(--spacing-sm);
     }
 
     .header__title {
-        font-size: var(--font-size-lg);
+        font-size: var(--font-size-md);
         font-weight: 600;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -163,8 +163,8 @@
     }
 
     .header__menu-btn {
-        width: 48px;
-        height: 48px;
+        width: 44px;
+        height: 44px;
         display: flex !important;
         align-items: center;
         justify-content: center;
@@ -173,29 +173,29 @@
     }
 
     .header__menu-btn svg {
-        width: 28px;
-        height: 28px;
+        width: 24px;
+        height: 24px;
     }
 
     .header__action-btn {
-        width: 40px;
-        height: 40px;
+        width: 38px;
+        height: 38px;
     }
 
     .header__action-btn svg {
-        width: 20px;
-        height: 20px;
+        width: 18px;
+        height: 18px;
     }
 
     .header__avatar {
-        width: 32px;
-        height: 32px;
+        width: 30px;
+        height: 30px;
     }
 
     .header__avatar-btn {
         padding: 0;
-        width: 36px;
-        height: 36px;
+        width: 34px;
+        height: 34px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -203,22 +203,22 @@
 
     /* ===== SIDEBAR OPTIMIZATIONS ===== */
     .sidebar {
-        width: 280px;
+        width: 260px;
         box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
     }
 
     .sidebar__menu-link {
-        padding: var(--spacing-md) var(--spacing-lg);
-        font-size: var(--font-size-md);
-        min-height: 52px;
+        padding: var(--spacing-sm) var(--spacing-md);
+        font-size: var(--font-size-sm);
+        min-height: 48px;
         display: flex;
         align-items: center;
-        gap: var(--spacing-md);
+        gap: var(--spacing-sm);
     }
 
     .sidebar__menu-icon {
-        width: 24px !important;
-        height: 24px !important;
+        width: 22px !important;
+        height: 22px !important;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -226,21 +226,21 @@
     }
 
     .sidebar__menu-icon svg {
-        width: 22px !important;
-        height: 22px !important;
+        width: 20px !important;
+        height: 20px !important;
     }
 
     .sidebar__user {
-        padding: var(--spacing-md) var(--spacing-lg);
+        padding: var(--spacing-md);
     }
 
     .sidebar__user-avatar {
-        width: 40px;
-        height: 40px;
+        width: 36px;
+        height: 36px;
     }
 
     .sidebar__user-name {
-        font-size: var(--font-size-md);
+        font-size: var(--font-size-sm);
     }
 
     /* ===== CONTENT OPTIMIZATIONS ===== */
@@ -366,17 +366,17 @@
 
     /* ===== STATS CARDS ===== */
     .stat-card {
-        padding: var(--spacing-md);
+        padding: var(--spacing-sm) var(--spacing-md);
     }
 
     .stat-card__icon {
-        width: 40px !important;
-        height: 40px !important;
+        width: 36px !important;
+        height: 36px !important;
     }
 
     .stat-card__icon svg {
-        width: 24px;
-        height: 24px;
+        width: 20px;
+        height: 20px;
     }
 
     .stat-card__label {
@@ -385,7 +385,7 @@
     }
 
     .stat-card__value {
-        font-size: 1.5rem !important;
+        font-size: 1.25rem !important;
         margin-top: 0;
     }
 

@@ -531,15 +531,15 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 4px;
-    padding: var(--spacing-sm);
+    gap: 3px;
+    padding: var(--spacing-xs) var(--spacing-sm);
     color: var(--text-muted);
     text-decoration: none;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 500;
     transition: all var(--transition-fast);
-    min-width: 64px;
-    min-height: 56px;
+    min-width: 60px;
+    min-height: 52px;
     border-radius: var(--border-radius-md);
     -webkit-tap-highlight-color: transparent;
 }
@@ -561,14 +561,14 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: 26px;
+    height: 26px;
     transition: transform var(--transition-fast);
 }
 
 .pwa-bottom-nav__icon svg {
-    width: 32px;
-    height: 32px;
+    width: 26px;
+    height: 26px;
 }
 
 .pwa-bottom-nav__label {
