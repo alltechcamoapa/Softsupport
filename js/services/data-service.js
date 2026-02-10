@@ -101,7 +101,8 @@ const DataService = (() => {
             cache.productos = (productos || []).map(p => ({ ...p, productoId: p.id }));
             cache.proformas = (proformas || []).map(p => ({
                 ...p,
-                proformaId: p.proforma_id,
+                proformaId: p.codigo_proforma,
+                numero: p.numero_proforma,
                 clienteId: p.cliente_id,
                 cliente: p.cliente ? normalizeSupabaseData('clientes', p.cliente) : null
             }));
@@ -112,7 +113,17 @@ const DataService = (() => {
                 clienteId: p.cliente_id,
                 cliente: p.cliente ? normalizeSupabaseData('clientes', p.cliente) : null
             }));
-            cache.empleados = (empleados || []).map(e => ({ ...e }));
+            cache.empleados = (empleados || []).map(e => ({
+                ...e,
+                // Normalizar snake_case → camelCase para compatibilidad con UI
+                fechaAlta: e.fecha_alta || e.fechaAlta,
+                salarioTotal: parseFloat(e.salario_total) || e.salarioTotal || 0,
+                tipoSalario: e.tipo_salario || e.tipoSalario,
+                tipoContrato: e.tipo_contrato || e.tipoContrato,
+                tiempoContrato: e.tiempo_contrato || e.tiempoContrato,
+                vacacionesTomadas: e.vacaciones_tomadas || e.vacacionesTomadas || 0,
+                aguinaldoPagado: e.aguinaldo_pagado || e.aguinaldoPagado || false
+            }));
 
             // Cargar permisos por defecto (hardcoded por seguridad)
             cache.permissions = loadDefaultPermissions();
@@ -739,12 +750,14 @@ const DataService = (() => {
             let matches = true;
             if (filter.search) {
                 const s = filter.search.toLowerCase();
-                const cliente = getClienteById(p.clienteId);
-                matches = (p.proformaId || '').toLowerCase().includes(s) ||
-                    String(p.numero || '').includes(s) ||
+                const cliente = getClienteById(p.clienteId || p.cliente_id);
+                matches = (p.proformaId || p.codigo_proforma || '').toLowerCase().includes(s) ||
+                    String(p.numero || p.numero_proforma || '').includes(s) ||
                     (cliente?.empresa || '').toLowerCase().includes(s);
             }
-            if (filter.clienteId && filter.clienteId !== 'all') matches = matches && p.clienteId === filter.clienteId;
+            if (filter.clienteId && filter.clienteId !== 'all') {
+                matches = matches && (p.clienteId === filter.clienteId || p.cliente_id === filter.clienteId || p.id === filter.clienteId);
+            }
             if (filter.estado && filter.estado !== 'all') matches = matches && p.estado === filter.estado;
             return matches;
         });
@@ -758,26 +771,52 @@ const DataService = (() => {
     };
     const createProforma = async (data) => {
         const numero = getNextProformaNumber();
+        const fechaEmision = data.fecha || new Date().toISOString().split('T')[0];
+        const validezDias = data.validezDias || 15;
+
+        // Calculate expiration date
+        const fechaVenc = new Date(fechaEmision);
+        fechaVenc.setDate(fechaVenc.getDate() + validezDias);
+
+        // Map to actual DB columns (proformas table)
         const proformaData = {
-            proforma_id: `PROF-${String(numero).padStart(4, '0')}`,
-            numero,
+            codigo_proforma: `PROF-${String(numero).padStart(4, '0')}`,
+            numero_proforma: numero,
             cliente_id: data.clienteId,
-            fecha: data.fecha || new Date().toISOString().split('T')[0],
-            validez_dias: data.validezDias || 15,
+            fecha_emision: fechaEmision,
+            fecha_vencimiento: fechaVenc.toISOString().split('T')[0],
+            validez_dias: validezDias,
             moneda: data.moneda || 'USD',
-            items: data.items || [],
             subtotal: data.items?.reduce((sum, i) => sum + (i.total || 0), 0) || 0,
             total: data.items?.reduce((sum, i) => sum + (i.total || 0), 0) || 0,
             notas: data.notas || '',
-            estado: 'Activa',
-            creado_por: data.creadoPor || ''
+            estado: 'Activa'
+            // created_by is set automatically by supabase-data-service
         };
+
+        // Items will be inserted separately into proforma_items table
+        const items = data.items || [];
 
         const res = await SupabaseDataService.createProforma(proformaData);
         if (res.success) {
-            const item = { ...res.data, proformaId: res.data.proforma_id, clienteId: res.data.cliente_id };
+            // Insert items into proforma_items table
+            if (items.length > 0) {
+                try {
+                    await SupabaseDataService.createProformaItems(res.data.id, items);
+                } catch (itemErr) {
+                    console.error('Error al crear items de proforma:', itemErr);
+                }
+            }
+
+            const item = {
+                ...res.data,
+                proformaId: res.data.codigo_proforma,
+                clienteId: res.data.cliente_id,
+                numero: res.data.numero_proforma,
+                items: items
+            };
             cache.proformas.unshift(item);
-            LogService.log('proformas', 'create', item.id, `Proforma creada: ${item.proforma_id}`);
+            LogService.log('proformas', 'create', item.id, `Proforma creada: ${item.codigo_proforma}`);
             return item;
         }
         throw new Error(res.error || 'Error al crear proforma');
@@ -787,20 +826,21 @@ const DataService = (() => {
         const current = getProformaById(id);
         const uuid = current ? current.id : id;
 
-        const updateData = {
-            cliente_id: data.clienteId || current?.cliente_id,
-            items: data.items || current?.items,
-            subtotal: data.subtotal,
-            total: data.total,
-            notas: data.notas,
-            estado: data.estado
-        };
+        // Map to actual DB columns (only include defined values)
+        const updateData = {};
+        if (data.clienteId) updateData.cliente_id = data.clienteId;
+        if (data.subtotal !== undefined) updateData.subtotal = data.subtotal;
+        if (data.total !== undefined) updateData.total = data.total;
+        if (data.notas !== undefined) updateData.notas = data.notas;
+        if (data.estado) updateData.estado = data.estado;
+        if (data.moneda) updateData.moneda = data.moneda;
+        if (data.validezDias) updateData.validez_dias = data.validezDias;
 
         const res = await SupabaseDataService.updateProforma(uuid, updateData);
         if (res.success) {
             const idx = cache.proformas.findIndex(p => p.id === uuid || p.proformaId === id);
             if (idx !== -1) cache.proformas[idx] = { ...cache.proformas[idx], ...res.data };
-            LogService.log('proformas', 'update', uuid, `Proforma actualizada: ${current?.proformaId || id}`);
+            LogService.log('proformas', 'update', uuid, `Proforma actualizada: ${current?.proformaId || current?.codigo_proforma || id}`);
             return true;
         }
         throw new Error(res.error || 'Error al actualizar proforma');
@@ -939,21 +979,23 @@ const DataService = (() => {
     };
 
     const createEmpleado = async (data) => {
-        const newData = {
-            ...data,
-            id: generateUUID(),
-            createdAt: new Date().toISOString(),
-            estado: data.estado || 'Activo',
-            vacacionesTomadas: 0,
-            aguinaldoPagado: false
-        };
-
-        const res = await SupabaseDataService.createEmpleado?.(newData);
+        const res = await SupabaseDataService.createEmpleado?.(data);
         if (res?.success) {
             if (!cache.empleados) cache.empleados = [];
-            cache.empleados.push(newData);
-            LogService.log('empleados', 'create', newData.id, `Empleado creado: ${newData.nombre}`);
-            return newData;
+            // Normalizar datos retornados de Supabase
+            const normalized = {
+                ...res.data,
+                fechaAlta: res.data.fecha_alta,
+                salarioTotal: parseFloat(res.data.salario_total) || 0,
+                tipoSalario: res.data.tipo_salario,
+                tipoContrato: res.data.tipo_contrato,
+                tiempoContrato: res.data.tiempo_contrato,
+                vacacionesTomadas: res.data.vacaciones_tomadas || 0,
+                aguinaldoPagado: res.data.aguinaldo_pagado || false
+            };
+            cache.empleados.push(normalized);
+            LogService.log('empleados', 'create', normalized.id, `Empleado creado: ${normalized.nombre}`);
+            return normalized;
         }
         throw new Error(res?.error || 'Error al crear empleado');
     };
@@ -966,7 +1008,16 @@ const DataService = (() => {
         if (res?.success) {
             const idx = cache.empleados.findIndex(e => e.id === uuid);
             if (idx !== -1) {
-                cache.empleados[idx] = { ...cache.empleados[idx], ...data, updatedAt: new Date().toISOString() };
+                const merged = { ...cache.empleados[idx], ...data, updatedAt: new Date().toISOString() };
+                // Re-normalizar camelCase
+                merged.fechaAlta = merged.fecha_alta || merged.fechaAlta;
+                merged.salarioTotal = parseFloat(merged.salario_total || merged.salarioTotal) || 0;
+                merged.tipoSalario = merged.tipo_salario || merged.tipoSalario;
+                merged.tipoContrato = merged.tipo_contrato || merged.tipoContrato;
+                merged.tiempoContrato = merged.tiempo_contrato || merged.tiempoContrato;
+                merged.vacacionesTomadas = merged.vacaciones_tomadas ?? merged.vacacionesTomadas ?? 0;
+                merged.aguinaldoPagado = merged.aguinaldo_pagado ?? merged.aguinaldoPagado ?? false;
+                cache.empleados[idx] = merged;
             }
             LogService.log('empleados', 'update', uuid, `Empleado actualizado: ${current?.nombre || id}`);
             return true;

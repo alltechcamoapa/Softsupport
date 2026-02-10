@@ -53,7 +53,7 @@ const ProformasModule = (() => {
                       onchange="ProformasModule.handleClienteFilter(this.value)">
                 <option value="all">Todos los clientes</option>
                 ${clientes.map(c => `
-                  <option value="${c.clienteId}" ${filterState.clienteId === c.clienteId ? 'selected' : ''}>
+                  <option value="${c.id}" ${filterState.clienteId === c.id ? 'selected' : ''}>
                     ${c.empresa}
                   </option>
                 `).join('')}
@@ -129,25 +129,29 @@ const ProformasModule = (() => {
         </thead>
         <tbody class="data-table__body">
           ${proformas.map(proforma => {
-      const cliente = DataService.getClienteById(proforma.clienteId);
-      const fechaVencimiento = new Date(proforma.fecha);
-      fechaVencimiento.setDate(fechaVencimiento.getDate() + proforma.validezDias);
+      const cliente = DataService.getClienteById(proforma.clienteId || proforma.cliente_id);
+      const fechaProforma = proforma.fecha_emision || proforma.fecha || '';
+      const validezDias = proforma.validez_dias || proforma.validezDias || 15;
+      const fechaVencimiento = new Date(fechaProforma);
+      fechaVencimiento.setDate(fechaVencimiento.getDate() + validezDias);
       const hoy = new Date();
       const diasRestantes = Math.ceil((fechaVencimiento - hoy) / (1000 * 60 * 60 * 24));
+      const itemsCount = (proforma.items || []).length;
+      const totalValue = parseFloat(proforma.total) || 0;
 
       return `
               <tr>
-                <td><span class="font-medium">${proforma.numero}</span></td>
-                <td><span class="text-muted">${proforma.proformaId}</span></td>
+                <td><span class="font-medium">${proforma.numero || proforma.numero_proforma || ''}</span></td>
+                <td><span class="text-muted">${proforma.proformaId || proforma.codigo_proforma || ''}</span></td>
                 <td>
                   <div class="font-medium">${cliente?.empresa || 'N/A'}</div>
                   <div class="text-xs text-muted">${cliente?.nombreCliente || ''}</div>
                 </td>
                 <td>
-                  <div>${new Date(proforma.fecha).toLocaleDateString('es-NI')}</div>
+                  <div>${fechaProforma ? new Date(fechaProforma).toLocaleDateString('es-NI') : '-'}</div>
                 </td>
                 <td>
-                  <div class="text-sm">${proforma.validezDias} días</div>
+                  <div class="text-sm">${validezDias} días</div>
                   ${proforma.estado === 'Activa' ? `
                     <div class="text-xs ${diasRestantes <= 3 ? 'text-danger' : 'text-muted'}">
                       ${diasRestantes > 0 ? `${diasRestantes} restantes` : 'Vencida'}
@@ -155,10 +159,10 @@ const ProformasModule = (() => {
                   ` : ''}
                 </td>
                 <td>
-                  <span class="badge badge--info">${proforma.items.length} items</span>
+                  <span class="badge badge--info">${itemsCount} items</span>
                 </td>
                 <td>
-                  <span class="font-medium">${proforma.moneda === 'USD' ? '$' : 'C$'}${proforma.total.toFixed(2)}</span>
+                  <span class="font-medium">${proforma.moneda === 'USD' ? '$' : 'C$'}${totalValue.toFixed(2)}</span>
                 </td>
                 <td>
                   <span class="badge ${getEstadoBadgeClass(proforma.estado)}">
@@ -167,22 +171,22 @@ const ProformasModule = (() => {
                 </td>
                 <td>
                   <div class="flex gap-xs">
-                    <button class="btn btn--ghost btn--icon btn--sm" onclick="ProformasModule.viewDetail('${proforma.proformaId}')" title="Ver">
+                    <button class="btn btn--ghost btn--icon btn--sm" onclick="ProformasModule.viewDetail('${proforma.proformaId || proforma.codigo_proforma}')" title="Ver">
                       ${Icons.eye}
                     </button>
-                    <button class="btn btn--ghost btn--icon btn--sm" onclick="ProformasModule.generatePDF('${proforma.proformaId}')" title="PDF">
+                    <button class="btn btn--ghost btn--icon btn--sm" onclick="ProformasModule.generatePDF('${proforma.proformaId || proforma.codigo_proforma}')" title="PDF">
                       ${Icons.fileText}
                     </button>
                     ${proforma.estado === 'Activa' && canUpdate ? `
-                      <button class="btn btn--ghost btn--icon btn--sm" onclick="ProformasModule.openEditModal('${proforma.proformaId}')" title="Editar">
+                      <button class="btn btn--ghost btn--icon btn--sm" onclick="ProformasModule.openEditModal('${proforma.proformaId || proforma.codigo_proforma}')" title="Editar">
                         ${Icons.edit}
                       </button>
-                      <button class="btn btn--ghost btn--icon btn--sm text-success" onclick="ProformasModule.aprobarProforma('${proforma.proformaId}')" title="Aprobar">
+                      <button class="btn btn--ghost btn--icon btn--sm text-success" onclick="ProformasModule.aprobarProforma('${proforma.proformaId || proforma.codigo_proforma}')" title="Aprobar">
                         ${Icons.checkCircle}
                       </button>
                     ` : ''}
                     ${canDelete ? `
-                      <button class="btn btn--ghost btn--icon btn--sm text-danger" onclick="ProformasModule.deleteProforma('${proforma.proformaId}')" title="Eliminar">
+                      <button class="btn btn--ghost btn--icon btn--sm text-danger" onclick="ProformasModule.deleteProforma('${proforma.proformaId || proforma.codigo_proforma}')" title="Eliminar">
                         ${Icons.trash}
                       </button>
                     ` : ''}
@@ -248,7 +252,7 @@ const ProformasModule = (() => {
                 <select name="clienteId" class="form-select" required>
                   <option value="">Seleccionar cliente...</option>
                   ${clientes.map(c => `
-                    <option value="${c.clienteId}" ${proforma?.clienteId === c.clienteId ? 'selected' : ''}>
+                    <option value="${c.id}" ${proforma?.cliente_id === c.id || proforma?.clienteId === c.clienteId ? 'selected' : ''}>
                       ${c.empresa} - ${c.nombreCliente}
                     </option>
                   `).join('')}
@@ -257,7 +261,7 @@ const ProformasModule = (() => {
               <div class="form-group">
                 <label class="form-label form-label--required">Días de Validez</label>
                 <input type="number" name="validezDias" class="form-input" 
-                       value="${proforma?.validezDias || 15}" min="1" max="90" required>
+                       value="${proforma?.validez_dias || proforma?.validezDias || 15}" min="1" max="90" required>
                 <span class="form-hint">¿Cuántos días será válida esta proforma?</span>
               </div>
             </div>
@@ -266,7 +270,7 @@ const ProformasModule = (() => {
               <div class="form-group">
                 <label class="form-label form-label--required">Fecha</label>
                 <input type="date" name="fecha" class="form-input" 
-                       value="${proforma?.fecha || new Date().toISOString().split('T')[0]}" required>
+                       value="${proforma?.fecha_emision || proforma?.fecha || new Date().toISOString().split('T')[0]}" required>
               </div>
               <div class="form-group">
                 <label class="form-label">Moneda</label>
@@ -389,17 +393,24 @@ const ProformasModule = (() => {
   // ========== DETAIL MODAL ==========
 
   const renderDetailModal = (proforma) => {
-    const cliente = DataService.getClienteById(proforma.clienteId);
-    const fechaVencimiento = new Date(proforma.fecha);
-    fechaVencimiento.setDate(fechaVencimiento.getDate() + proforma.validezDias);
+    const cliente = DataService.getClienteById(proforma.clienteId || proforma.cliente_id);
+    const fechaProforma = proforma.fecha_emision || proforma.fecha || '';
+    const validezDias = proforma.validez_dias || proforma.validezDias || 15;
+    const fechaVencimiento = new Date(fechaProforma);
+    fechaVencimiento.setDate(fechaVencimiento.getDate() + validezDias);
+    const items = proforma.items || [];
+    const subtotalValue = parseFloat(proforma.subtotal) || 0;
+    const totalValue = parseFloat(proforma.total) || 0;
+    const proformaCode = proforma.proformaId || proforma.codigo_proforma || '';
+    const proformaNumero = proforma.numero || proforma.numero_proforma || '';
 
     return `
       <div class="modal-overlay open" onclick="ProformasModule.closeModal(event)">
         <div class="modal modal--lg" onclick="event.stopPropagation()">
           <div class="modal__header">
             <div>
-              <h3 class="modal__title">Proforma #${proforma.numero}</h3>
-              <p class="text-sm text-muted">${proforma.proformaId}</p>
+              <h3 class="modal__title">Proforma #${proformaNumero}</h3>
+              <p class="text-sm text-muted">${proformaCode}</p>
             </div>
             <button class="modal__close" onclick="ProformasModule.closeModal()">${Icons.x}</button>
           </div>
@@ -415,11 +426,11 @@ const ProformasModule = (() => {
               </div>
               <div class="detail-item">
                 <div class="detail-item__label">Fecha Emisión</div>
-                <div class="detail-item__value">${new Date(proforma.fecha).toLocaleDateString('es-NI')}</div>
+                <div class="detail-item__value">${fechaProforma ? new Date(fechaProforma).toLocaleDateString('es-NI') : '-'}</div>
               </div>
               <div class="detail-item">
                 <div class="detail-item__label">Creado Por</div>
-                <div class="detail-item__value">${proforma.creadoPor || 'Desconocido'}</div>
+                <div class="detail-item__value">${proforma.creadoPor || proforma.creado_por_nombre || 'Sistema'}</div>
               </div>
               <div class="detail-item">
                 <div class="detail-item__label">Válida Hasta</div>
@@ -440,6 +451,7 @@ const ProformasModule = (() => {
             <!-- Items Table -->
             <div style="margin-top: var(--spacing-lg);">
               <h4 style="margin-bottom: var(--spacing-sm); color: var(--text-primary);">Detalle de Items</h4>
+              ${items.length > 0 ? `
               <table class="data-table">
                 <thead class="data-table__head">
                   <tr>
@@ -450,26 +462,27 @@ const ProformasModule = (() => {
                   </tr>
                 </thead>
                 <tbody class="data-table__body">
-                  ${proforma.items.map(item => `
+                  ${items.map(item => `
                     <tr>
                       <td>${item.cantidad}</td>
                       <td>${item.descripcion}</td>
-                      <td>${proforma.moneda === 'USD' ? '$' : 'C$'}${item.precioUnitario.toFixed(2)}</td>
-                      <td class="font-medium">${proforma.moneda === 'USD' ? '$' : 'C$'}${item.total.toFixed(2)}</td>
+                      <td>${proforma.moneda === 'USD' ? '$' : 'C$'}${(parseFloat(item.precioUnitario || item.precio_unitario) || 0).toFixed(2)}</td>
+                      <td class="font-medium">${proforma.moneda === 'USD' ? '$' : 'C$'}${(parseFloat(item.total) || 0).toFixed(2)}</td>
                     </tr>
                   `).join('')}
                 </tbody>
               </table>
+              ` : '<p class="text-muted text-sm">No hay items registrados</p>'}
             </div>
 
             <div class="proforma-totals" style="margin-top: var(--spacing-md);">
               <div class="proforma-totals__row">
                 <span>Subtotal:</span>
-                <span>${proforma.moneda === 'USD' ? '$' : 'C$'}${proforma.subtotal.toFixed(2)}</span>
+                <span>${proforma.moneda === 'USD' ? '$' : 'C$'}${subtotalValue.toFixed(2)}</span>
               </div>
               <div class="proforma-totals__row proforma-totals__row--total">
                 <span>Total:</span>
-                <span>${proforma.moneda === 'USD' ? '$' : 'C$'}${proforma.total.toFixed(2)}</span>
+                <span>${proforma.moneda === 'USD' ? '$' : 'C$'}${totalValue.toFixed(2)}</span>
               </div>
             </div>
 
@@ -482,10 +495,10 @@ const ProformasModule = (() => {
           </div>
           <div class="modal__footer">
             <button class="btn btn--secondary" onclick="ProformasModule.closeModal()">Cerrar</button>
-            <button class="btn btn--success" onclick="ProformasModule.sendViaWhatsApp('${proforma.proformaId}')" title="Enviar por WhatsApp">
+            <button class="btn btn--success" onclick="ProformasModule.sendViaWhatsApp('${proformaCode}')" title="Enviar por WhatsApp">
               ${Icons.messageCircle || '💬'} WhatsApp
             </button>
-            <button class="btn btn--primary" onclick="ProformasModule.generatePDF('${proforma.proformaId}')">${Icons.fileText} Generar PDF</button>
+            <button class="btn btn--primary" onclick="ProformasModule.generatePDF('${proformaCode}')">${Icons.fileText} Generar PDF</button>
           </div>
         </div>
       </div>
@@ -556,10 +569,16 @@ const ProformasModule = (() => {
     const proforma = DataService.getProformaById(proformaId);
     if (!proforma) return;
 
-    const cliente = DataService.getClienteById(proforma.clienteId);
-    const fechaVencimiento = new Date(proforma.fecha);
-    fechaVencimiento.setDate(fechaVencimiento.getDate() + proforma.validezDias);
+    const cliente = DataService.getClienteById(proforma.clienteId || proforma.cliente_id);
+    const fechaProforma = proforma.fecha_emision || proforma.fecha || '';
+    const validezDias = proforma.validez_dias || proforma.validezDias || 15;
+    const fechaVencimiento = new Date(fechaProforma);
+    fechaVencimiento.setDate(fechaVencimiento.getDate() + validezDias);
     const simbolo = proforma.moneda === 'USD' ? '$' : 'C$';
+    const items = proforma.items || [];
+    const subtotalValue = parseFloat(proforma.subtotal) || 0;
+    const totalValue = parseFloat(proforma.total) || 0;
+    const proformaNumero = proforma.numero || proforma.numero_proforma || '';
 
     const content = `
       <div class="header">
@@ -569,8 +588,8 @@ const ProformasModule = (() => {
         </div>
         <div class="proforma-info">
           <h2>PROFORMA</h2>
-          <p><strong>Nº:</strong> ${String(proforma.numero).padStart(4, '0')}</p>
-          <p><strong>Fecha:</strong> ${new Date(proforma.fecha).toLocaleDateString('es-NI')}</p>
+          <p><strong>Nº:</strong> ${String(proformaNumero).padStart(4, '0')}</p>
+          <p><strong>Fecha:</strong> ${fechaProforma ? new Date(fechaProforma).toLocaleDateString('es-NI') : '-'}</p>
           <p><strong>Válida hasta:</strong> ${fechaVencimiento.toLocaleDateString('es-NI')}</p>
         </div>
       </div>
@@ -597,14 +616,14 @@ const ProformasModule = (() => {
             </tr>
           </thead>
           <tbody>
-            ${proforma.items.map(item => `
+            ${items.length > 0 ? items.map(item => `
               <tr>
                 <td style="text-align: center;">${item.cantidad}</td>
                 <td>${item.descripcion}</td>
-                <td style="text-align: right;">${simbolo}${item.precioUnitario.toFixed(2)}</td>
-                <td style="text-align: right;">${simbolo}${item.total.toFixed(2)}</td>
+                <td style="text-align: right;">${simbolo}${(parseFloat(item.precioUnitario || item.precio_unitario) || 0).toFixed(2)}</td>
+                <td style="text-align: right;">${simbolo}${(parseFloat(item.total) || 0).toFixed(2)}</td>
               </tr>
-            `).join('')}
+            `).join('') : '<tr><td colspan="4" style="text-align:center;">Sin items</td></tr>'}
           </tbody>
         </table>
       </div>
@@ -612,11 +631,11 @@ const ProformasModule = (() => {
       <div class="totals">
         <div class="totals-row">
           <span>Subtotal:</span>
-          <span>${simbolo}${proforma.subtotal.toFixed(2)}</span>
+          <span>${simbolo}${subtotalValue.toFixed(2)}</span>
         </div>
         <div class="totals-row totals-row--total">
           <span>TOTAL:</span>
-          <span>${simbolo}${proforma.total.toFixed(2)}</span>
+          <span>${simbolo}${totalValue.toFixed(2)}</span>
         </div>
       </div>
 
@@ -628,7 +647,7 @@ const ProformasModule = (() => {
       ` : ''}
 
       <div class="validity-notice">
-        <p>Esta proforma tiene una validez de <strong>${proforma.validezDias} días</strong> a partir de la fecha de emisión.</p>
+        <p>Esta proforma tiene una validez de <strong>${validezDias} días</strong> a partir de la fecha de emisión.</p>
       </div>
     `;
 
@@ -654,7 +673,7 @@ const ProformasModule = (() => {
       return;
     }
 
-    const totalValor = proformas.reduce((sum, p) => sum + p.total, 0);
+    const totalValor = proformas.reduce((sum, p) => sum + (parseFloat(p.total) || 0), 0);
 
     const content = `
       <div class="header">
@@ -700,10 +719,10 @@ const ProformasModule = (() => {
           <tbody>
             ${proformas.map(p => `
               <tr>
-                <td>${p.numero}</td>
-                <td>${new Date(p.fecha).toLocaleDateString('es-NI')}</td>
-                <td>${p.items.length}</td>
-                <td>$${p.total.toFixed(2)}</td>
+                <td>${p.numero || p.numero_proforma || ''}</td>
+                <td>${(p.fecha_emision || p.fecha) ? new Date(p.fecha_emision || p.fecha).toLocaleDateString('es-NI') : '-'}</td>
+                <td>${(p.items || []).length}</td>
+                <td>$${(parseFloat(p.total) || 0).toFixed(2)}</td>
                 <td><span class="badge badge-${p.estado === 'Aprobada' ? 'success' : p.estado === 'Activa' ? 'primary' : 'warning'}">${p.estado}</span></td>
               </tr>
             `).join('')}
@@ -731,7 +750,7 @@ const ProformasModule = (() => {
       return;
     }
 
-    const totalValor = proformas.reduce((sum, p) => sum + p.total, 0);
+    const totalValor = proformas.reduce((sum, p) => sum + (parseFloat(p.total) || 0), 0);
 
     const content = `
       <div class="header">
@@ -777,14 +796,14 @@ const ProformasModule = (() => {
           </thead>
           <tbody>
             ${proformas.map(p => {
-      const cliente = DataService.getClienteById(p.clienteId);
+      const cliente = DataService.getClienteById(p.clienteId || p.cliente_id);
       return `
                 <tr>
-                  <td>${p.numero}</td>
-                  <td>${new Date(p.fecha).toLocaleDateString('es-NI')}</td>
+                  <td>${p.numero || p.numero_proforma || ''}</td>
+                  <td>${(p.fecha_emision || p.fecha) ? new Date(p.fecha_emision || p.fecha).toLocaleDateString('es-NI') : '-'}</td>
                   <td>${cliente?.empresa || 'N/A'}</td>
-                  <td>${p.items.length}</td>
-                  <td>$${p.total.toFixed(2)}</td>
+                  <td>${(p.items || []).length}</td>
+                  <td>$${(parseFloat(p.total) || 0).toFixed(2)}</td>
                   <td><span class="badge badge-${p.estado === 'Aprobada' ? 'success' : p.estado === 'Activa' ? 'primary' : 'warning'}">${p.estado}</span></td>
                 </tr>
               `;
@@ -857,7 +876,7 @@ const ProformasModule = (() => {
   const handleClienteFilter = (value) => { filterState.clienteId = value; App.refreshCurrentModule(); };
   const handleEstadoFilter = (value) => { filterState.estado = value; App.refreshCurrentModule(); };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     const formData = new FormData(event.target);
     const data = Object.fromEntries(formData.entries());
@@ -880,20 +899,36 @@ const ProformasModule = (() => {
     data.usuarioId = user.id;
     data.creadoPor = user.name;
 
-    if (data.proformaId) {
-      DataService.updateProforma(data.proformaId, data);
-    } else {
-      DataService.createProforma(data);
-    }
+    try {
+      if (data.proformaId) {
+        await DataService.updateProforma(data.proformaId, data);
+      } else {
+        await DataService.createProforma(data);
+      }
 
-    closeModal();
-    App.refreshCurrentModule();
+      closeModal();
+      App.refreshCurrentModule();
+      if (typeof App.showNotification === 'function') {
+        App.showNotification(data.proformaId ? 'Proforma actualizada' : 'Proforma creada exitosamente', 'success');
+      }
+    } catch (error) {
+      console.error('Error al guardar proforma:', error);
+      alert('Error al guardar la proforma: ' + (error.message || 'Error desconocido'));
+    }
   };
 
-  const aprobarProforma = (proformaId) => {
+  const aprobarProforma = async (proformaId) => {
     if (confirm('¿Deseas aprobar esta proforma?')) {
-      DataService.updateProforma(proformaId, { estado: 'Aprobada' });
-      App.refreshCurrentModule();
+      try {
+        await DataService.updateProforma(proformaId, { estado: 'Aprobada' });
+        App.refreshCurrentModule();
+        if (typeof App.showNotification === 'function') {
+          App.showNotification('Proforma aprobada', 'success');
+        }
+      } catch (error) {
+        console.error('Error al aprobar proforma:', error);
+        alert('Error al aprobar: ' + (error.message || 'Error desconocido'));
+      }
     }
   };
 
@@ -906,8 +941,33 @@ const ProformasModule = (() => {
   const openEditModal = (id) => {
     const proforma = DataService.getProformaById(id);
     if (proforma) {
+      // Load existing items into editor (handle both legacy and DB field names)
+      currentItems = (proforma.items || []).map(item => ({
+        cantidad: parseFloat(item.cantidad) || 1,
+        descripcion: item.descripcion || '',
+        precioUnitario: parseFloat(item.precioUnitario || item.precio_unitario) || 0,
+        total: parseFloat(item.total) || 0
+      }));
+      if (currentItems.length === 0) {
+        currentItems = [{ cantidad: 1, descripcion: '', precioUnitario: 0, total: 0 }];
+      }
       document.getElementById('proformaModal').innerHTML = renderFormModal(proforma);
       setTimeout(calculateTotals, 100);
+    }
+  };
+
+  const deleteProforma = async (proformaId) => {
+    if (confirm('¿Estás seguro de que deseas eliminar esta proforma?')) {
+      try {
+        await DataService.deleteProforma(proformaId);
+        App.refreshCurrentModule();
+        if (typeof App.showNotification === 'function') {
+          App.showNotification('Proforma eliminada', 'success');
+        }
+      } catch (error) {
+        console.error('Error al eliminar proforma:', error);
+        alert('Error al eliminar: ' + (error.message || 'Error desconocido'));
+      }
     }
   };
 
@@ -934,30 +994,33 @@ const ProformasModule = (() => {
       return;
     }
 
-    const cliente = DataService.getClienteById(proforma.clienteId);
+    const cliente = DataService.getClienteById(proforma.clienteId || proforma.cliente_id);
     if (!cliente || !cliente.telefono) {
       alert('Cliente no tiene teléfono registrado');
       return;
     }
 
+    const items = proforma.items || [];
+    const divisa = proforma.moneda || 'USD';
+    const simbolo = divisa === 'USD' ? '$' : 'C$';
+
     // Formatear items para el mensaje
-    const itemsList = proforma.items.map((item, index) => {
-      const total = item.cantidad * item.precioUnitario;
-      return `${index + 1}. ${item.descripcion}\n   Cant: ${item.cantidad} x $${item.precioUnitario.toFixed(2)} = $${total.toFixed(2)}`;
+    const itemsList = items.map((item, index) => {
+      const precio = parseFloat(item.precioUnitario || item.precio_unitario) || 0;
+      const total = (parseFloat(item.cantidad) || 0) * precio;
+      return `${index + 1}. ${item.descripcion}\n   Cant: ${item.cantidad} x ${simbolo}${precio.toFixed(2)} = ${simbolo}${total.toFixed(2)}`;
     }).join('\n\n');
 
     // Calcular totales
-    const subtotal = proforma.items.reduce((sum, item) =>
-      sum + (item.cantidad * item.precioUnitario), 0
-    );
-    const divisa = proforma.moneda || 'USD';
+    const totalValue = parseFloat(proforma.total) || 0;
+    const proformaCode = proforma.proformaId || proforma.codigo_proforma || '';
 
     // Preparar variables para el template
     const templateVars = {
-      cliente: cliente.nombre,
-      proformaId: proforma.proformaId,
+      cliente: cliente.nombreCliente || cliente.empresa || 'Cliente',
+      proformaId: proformaCode,
       items: itemsList,
-      total: `${subtotal.toFixed(2)} ${divisa}`
+      total: `${simbolo}${totalValue.toFixed(2)} ${divisa}`
     };
 
     // Enviar via WhatsApp usando template
@@ -1023,6 +1086,7 @@ const ProformasModule = (() => {
     generateClienteReport,
     generateRangoReport,
     aprobarProforma,
+    deleteProforma,
     sendViaWhatsApp,
     updateCurrencySymbols
   };

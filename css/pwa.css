@@ -542,6 +542,11 @@ body {
     min-height: 52px;
     border-radius: var(--border-radius-md);
     -webkit-tap-highlight-color: transparent;
+    /* Button reset (changed from <a> to <button>) */
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
 }
 
 .pwa-bottom-nav__item:active {

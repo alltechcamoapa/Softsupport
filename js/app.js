@@ -706,8 +706,26 @@ const App = (() => {
 
   // ========== ROUTING ==========
 
+  const handleHashChange = () => {
+    const hash = window.location.hash.slice(1) || 'dashboard';
+    if (hash !== State.get('currentModule')) {
+      navigate(hash);
+    }
+  };
+
   const navigate = (module) => {
+    // Always close sidebar before navigation (prevents flash on mobile)
+    closeSidebar();
     State.setCurrentModule(module);
+    // Update hash without triggering hashchange re-render
+    const currentHash = window.location.hash.slice(1);
+    if (currentHash !== module) {
+      window.removeEventListener('hashchange', handleHashChange);
+      window.location.hash = module;
+      requestAnimationFrame(() => {
+        window.addEventListener('hashchange', handleHashChange);
+      });
+    }
     render();
   };
 
@@ -811,13 +829,13 @@ const App = (() => {
     return `
       <nav class="pwa-bottom-nav" id="bottomNav">
         ${navItems.map(item => `
-          <a href="#${item.id}" 
+          <button type="button"
              class="pwa-bottom-nav__item ${currentModule === item.id ? 'pwa-bottom-nav__item--active' : ''}"
              data-module="${item.id}"
-             ${item.isMenu ? 'onclick="App.toggleSidebar(); return false;"' : ''}>
+             ${item.isMenu ? 'onclick="App.toggleSidebar();"' : ''}>
             <span class="pwa-bottom-nav__icon">${item.icon}</span>
             <span class="pwa-bottom-nav__label">${item.label}</span>
-          </a>
+          </button>
         `).join('')}
       </nav>
     `;
@@ -857,11 +875,12 @@ const App = (() => {
       });
     });
 
-    // Bottom navigation links
-    document.querySelectorAll('.pwa-bottom-nav__item:not([onclick])').forEach(link => {
-      link.addEventListener('click', (e) => {
+    // Bottom navigation buttons (no hash change, no sidebar trigger)
+    document.querySelectorAll('.pwa-bottom-nav__item:not([onclick])').forEach(btn => {
+      btn.addEventListener('click', (e) => {
         e.preventDefault();
-        const module = link.dataset.module;
+        e.stopPropagation();
+        const module = btn.dataset.module;
         if (module && module !== 'menu') {
           navigate(module);
         }
@@ -911,12 +930,7 @@ const App = (() => {
     });
 
     // Handle hash changes
-    window.addEventListener('hashchange', () => {
-      const hash = window.location.hash.slice(1) || 'dashboard';
-      if (hash !== State.get('currentModule')) {
-        navigate(hash);
-      }
-    });
+    window.addEventListener('hashchange', handleHashChange);
   };
 
   // ========== INITIALIZATION ==========

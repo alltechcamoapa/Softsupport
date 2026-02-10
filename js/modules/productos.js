@@ -227,7 +227,7 @@ const ProductosModule = (() => {
   const handleTipoFilter = (value) => { filterState.tipo = value; App.refreshCurrentModule(); };
   const handleEstadoFilter = (value) => { filterState.estado = value; App.refreshCurrentModule(); };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     const formData = new FormData(event.target);
     const data = Object.fromEntries(formData.entries());
@@ -235,20 +235,32 @@ const ProductosModule = (() => {
     // Convert numbers
     data.precio = parseFloat(data.precio);
 
-    if (data.id) {
-      DataService.updateProducto(data.id, data);
-    } else {
-      DataService.createProducto(data);
+    try {
+      if (data.id) {
+        await DataService.updateProducto(data.id, data);
+        App.showNotification?.('Producto actualizado correctamente', 'success');
+      } else {
+        await DataService.createProducto(data);
+        App.showNotification?.('Producto creado correctamente', 'success');
+      }
+      closeModal();
+      App.refreshCurrentModule();
+    } catch (e) {
+      console.error(e);
+      App.showNotification?.('Error al guardar: ' + e.message, 'error') || alert('Error: ' + e.message);
     }
-
-    closeModal();
-    App.refreshCurrentModule();
   };
 
-  const deleteItem = (id) => {
+  const deleteItem = async (id) => {
     if (confirm('¿Estás seguro de eliminar este item?')) {
-      DataService.deleteProducto(id);
-      App.refreshCurrentModule();
+      try {
+        await DataService.deleteProducto(id);
+        App.showNotification?.('Producto eliminado', 'success');
+        App.refreshCurrentModule();
+      } catch (e) {
+        console.error(e);
+        App.showNotification?.('Error al eliminar: ' + e.message, 'error') || alert('Error: ' + e.message);
+      }
     }
   };
 

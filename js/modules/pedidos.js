@@ -557,7 +557,7 @@ const PedidosModule = (() => {
     };
 
     // ========== HANDLE SUBMIT ==========
-    const handleSubmit = (event) => {
+    const handleSubmit = async (event) => {
         event.preventDefault();
         const form = event.target;
         const formData = new FormData(form);
@@ -577,22 +577,36 @@ const PedidosModule = (() => {
 
         const pedidoId = formData.get('pedidoId');
 
-        if (pedidoId) {
-            // Editar
-            DataService.updatePedido(pedidoId, pedidoData);
-            if (typeof NotificationService !== 'undefined') {
-                NotificationService.showToast('✅ Pedido actualizado correctamente', 'success');
+        try {
+            if (pedidoId) {
+                // Editar
+                await DataService.updatePedido(pedidoId, pedidoData);
+                if (typeof NotificationService !== 'undefined') {
+                    NotificationService.showToast('✅ Pedido actualizado correctamente', 'success');
+                } else {
+                    App.showNotification?.('Pedido actualizado correctamente', 'success');
+                }
+            } else {
+                // Crear nuevo
+                await DataService.createPedido(pedidoData);
+                if (typeof NotificationService !== 'undefined') {
+                    NotificationService.showToast('✅ Pedido creado correctamente', 'success');
+                } else {
+                    App.showNotification?.('Pedido creado correctamente', 'success');
+                }
             }
-        } else {
-            // Crear nuevo
-            DataService.createPedido(pedidoData);
+
+            closeModal();
+            App.render();
+        } catch (e) {
+            console.error(e);
+            const msg = e.message || 'Error al guardar pedido';
             if (typeof NotificationService !== 'undefined') {
-                NotificationService.showToast('✅ Pedido creado correctamente', 'success');
+                NotificationService.showToast('❌ ' + msg, 'error');
+            } else {
+                App.showNotification?.(msg, 'error') || alert(msg);
             }
         }
-
-        closeModal();
-        App.render();
     };
 
     // ========== VIEW DETAIL ==========
@@ -681,13 +695,25 @@ const PedidosModule = (() => {
     };
 
     // ========== DELETE ==========
-    const deletePedido = (pedidoId) => {
+    const deletePedido = async (pedidoId) => {
         if (confirm('¿Estás seguro de eliminar este pedido?')) {
-            DataService.deletePedido(pedidoId);
-            if (typeof NotificationService !== 'undefined') {
-                NotificationService.showToast('🗑️ Pedido eliminado', 'warning');
+            try {
+                await DataService.deletePedido(pedidoId);
+                if (typeof NotificationService !== 'undefined') {
+                    NotificationService.showToast('🗑️ Pedido eliminado', 'warning');
+                } else {
+                    App.showNotification?.('Pedido eliminado', 'success');
+                }
+                App.render();
+            } catch (e) {
+                console.error(e);
+                const msg = e.message || 'Error al eliminar pedido';
+                if (typeof NotificationService !== 'undefined') {
+                    NotificationService.showToast('❌ ' + msg, 'error');
+                } else {
+                    App.showNotification?.(msg, 'error') || alert(msg);
+                }
             }
-            App.render();
         }
     };
 

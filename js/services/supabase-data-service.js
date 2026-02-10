@@ -637,6 +637,14 @@ const SupabaseDataService = (() => {
             return [];
         }
 
+        // DEBUG: Imprimir estructura para verificar nombre de columnas
+        if (data && data.length > 0) {
+            console.group('📦 DEBUG SCHEMA PRODUCTOS');
+            console.log('Columnas disponibles:', Object.keys(data[0]));
+            console.log('Ejemplo de registro:', data[0]);
+            console.groupEnd();
+        }
+
         return data || [];
     };
 
@@ -666,42 +674,78 @@ const SupabaseDataService = (() => {
         }
 
         const user = await getCurrentUser();
-        if (user) {
+        // Solo agregar created_by si no viene en los datos
+        if (user && !productoData.created_by) {
             productoData.created_by = user.id;
         }
 
         console.log('📤 Creando producto con datos:', productoData);
 
-        const { data, error } = await client
+        let result = await client
             .from('productos')
             .insert([productoData])
             .select()
             .single();
 
-        if (error) {
-            console.error('❌ Error en createProducto:', error);
-            return { error: handleSupabaseError(error, 'createProducto') };
+        // Fallback para columna 'precio' -> 'precio_unitario'
+        if (result.error && result.error.message && result.error.message.includes("Could not find the 'precio' column")) {
+            console.warn("⚠️ Columna 'precio' no encontrada, reintentando con 'precio_unitario'...");
+            const fallbackData = { ...productoData, precio_unitario: productoData.precio };
+            delete fallbackData.precio;
+
+            result = await client
+                .from('productos')
+                .insert([fallbackData])
+                .select()
+                .single();
         }
 
-        console.log('✅ Producto creado:', data);
-        return { data, success: true };
+        if (result.error) {
+            console.error('❌ Error en createProducto:', result.error);
+            return { error: handleSupabaseError(result.error, 'createProducto') };
+        }
+
+        console.log('✅ Producto creado:', result.data);
+        return { data: result.data, success: true };
     };
 
     const updateProducto = async (id, updates) => {
         if (!client) return { error: 'Not initialized' };
 
-        const { data, error } = await client
+        const updateData = { ...updates, updated_at: new Date().toISOString() };
+
+        // No enviar 'precio' si vamos a probar fallback, pero lo necesitamos para el fallback
+
+        let result = await client
             .from('productos')
-            .update({ ...updates, updated_at: new Date().toISOString() })
+            .update(updateData)
             .eq('id', id)
             .select()
             .single();
 
-        if (error) {
-            return { error: handleSupabaseError(error, 'updateProducto') };
+        // Fallback para columna 'precio' -> 'precio_unitario'
+        if (result.error && result.error.message && result.error.message.includes("Could not find the 'precio' column")) {
+            console.warn("⚠️ Columna 'precio' no encontrada al actualizar, reintentando con 'precio_unitario'...");
+
+            // Si updates tiene precio, crear nuevo objeto
+            if (updateData.precio !== undefined) {
+                const fallbackData = { ...updateData, precio_unitario: updateData.precio };
+                delete fallbackData.precio;
+
+                result = await client
+                    .from('productos')
+                    .update(fallbackData)
+                    .eq('id', id)
+                    .select()
+                    .single();
+            }
         }
 
-        return { data, success: true };
+        if (result.error) {
+            return { error: handleSupabaseError(result.error, 'updateProducto') };
+        }
+
+        return { data: result.data, success: true };
     };
 
     const deleteProducto = async (id) => {
@@ -762,9 +806,9 @@ const SupabaseDataService = (() => {
     const createProforma = async (proformaData) => {
         if (!client) return { error: 'Not initialized' };
 
-        // Generar ID si no existe
-        if (!proformaData.proforma_id) {
-            proformaData.proforma_id = 'PROF' + Date.now().toString().slice(-6);
+        // Generar codigo si no existe
+        if (!proformaData.codigo_proforma) {
+            proformaData.codigo_proforma = 'PROF' + Date.now().toString().slice(-6);
         }
 
         const user = await getCurrentUser();
@@ -786,6 +830,37 @@ const SupabaseDataService = (() => {
         }
 
         console.log('✅ Proforma creada:', data);
+        return { data, success: true };
+    };
+
+    const createProformaItems = async (proformaId, items) => {
+        if (!client) return { error: 'Not initialized' };
+
+        const itemsToInsert = items.map((item, index) => ({
+            proforma_id: proformaId,
+            producto_id: item.productoId || null,
+            orden: index + 1,
+            codigo: item.codigo || null,
+            descripcion: item.descripcion,
+            cantidad: parseFloat(item.cantidad) || 1,
+            precio_unitario: parseFloat(item.precioUnitario) || 0,
+            total: parseFloat(item.total) || 0,
+            notas: item.notas || null
+        }));
+
+        console.log('📤 Insertando items de proforma:', itemsToInsert);
+
+        const { data, error } = await client
+            .from('proforma_items')
+            .insert(itemsToInsert)
+            .select();
+
+        if (error) {
+            console.error('❌ Error en createProformaItems:', error);
+            return { error: handleSupabaseError(error, 'createProformaItems') };
+        }
+
+        console.log('✅ Items de proforma creados:', data);
         return { data, success: true };
     };
 
@@ -1289,6 +1364,7 @@ const SupabaseDataService = (() => {
         getProformasSync,
         getProformaById,
         createProforma,
+        createProformaItems,
         updateProforma,
         deleteProforma,
 
