@@ -547,16 +547,63 @@ const DataService = (() => {
     // Dashboard & Reports
     const getDashboardStats = () => {
         // Calcular estadísticas localmente desde el caché
-        const clientesActivos = cache.clientes.filter(c => c.estado === 'Activo').length;
-        const contratosActivos = cache.contratos.filter(c => c.estadoContrato === 'Activo').length;
-        const visitasMes = cache.visitas.length;
-        const ingresosMes = cache.contratos.reduce((sum, c) => sum + (parseFloat(c.valorContrato) || 0), 0);
+        // Manejar tanto formato legacy como Supabase
+        const clientesActivos = cache.clientes.filter(c =>
+            (c.estado === 'Activo' || c.status === 'Activo')
+        ).length;
+
+        const contratosActivos = cache.contratos.filter(c =>
+            (c.estadoContrato === 'Activo' || c.estado_contrato === 'Activo' || c.status === 'Activo')
+        ).length;
+
+        // Visitas del mes actual
+        const today = new Date();
+        const currentMonth = today.getMonth();
+        const currentYear = today.getFullYear();
+        const visitasMes = cache.visitas.filter(v => {
+            const visitaDate = new Date(v.fechaInicio || v.fecha_inicio || v.fecha);
+            return visitaDate.getMonth() === currentMonth && visitaDate.getFullYear() === currentYear;
+        }).length;
+
+        // Calcular ingresos del mes desde contratos activos
+        const ingresosMes = cache.contratos
+            .filter(c => c.estadoContrato === 'Activo' || c.estado_contrato === 'Activo' || c.status === 'Activo')
+            .reduce((sum, c) => {
+                const valor = parseFloat(c.valorContrato || c.valor_contrato || c.valor || 0);
+                return sum + valor;
+            }, 0);
+
+        console.log('📊 Dashboard Stats:', {
+            total_clientes: cache.clientes.length,
+            clientesActivos,
+            total_contratos: cache.contratos.length,
+            contratosActivos,
+            total_visitas: cache.visitas.length,
+            visitasMes,
+            ingresosMes
+        });
 
         return {
-            clientesActivos: { value: clientesActivos || cache.clientes.length, trend: 12, trendDirection: 'up' },
-            serviciosMes: { value: visitasMes, trend: 8, trendDirection: 'up' },
-            ingresosMes: { value: ingresosMes, trend: 5, trendDirection: 'up' },
-            contratosActivos: { value: contratosActivos, trend: 3, trendDirection: 'up' }
+            clientesActivos: {
+                value: clientesActivos || 0,
+                trend: clientesActivos > 0 ? 12 : 0,
+                trendDirection: 'up'
+            },
+            serviciosMes: {
+                value: visitasMes || 0,
+                trend: visitasMes > 0 ? 8 : 0,
+                trendDirection: 'up'
+            },
+            ingresosMes: {
+                value: ingresosMes || 0,
+                trend: ingresosMes > 0 ? 5 : 0,
+                trendDirection: 'up'
+            },
+            contratosActivos: {
+                value: contratosActivos || 0,
+                trend: contratosActivos > 0 ? 3 : 0,
+                trendDirection: 'up'
+            }
         };
     };
 

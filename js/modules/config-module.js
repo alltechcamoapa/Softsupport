@@ -859,14 +859,19 @@ const ConfigModule = (() => {
     `;
   };
 
-  const saveNewUser = (event) => {
+  const saveNewUser = async (event) => {
     event.preventDefault();
     const formData = new FormData(event.target);
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+
+    // Deshabilitar botón
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '⏳ Creando usuario...';
 
     // Get selected modules
     const selectedModules = Array.from(formData.getAll('modules'));
 
-    const newUser = {
+    const userData = {
       name: formData.get('name'),
       username: formData.get('username'),
       email: formData.get('email'),
@@ -875,11 +880,27 @@ const ConfigModule = (() => {
       allowedModules: selectedModules
     };
 
-    // Save to DataService
-    DataService.createUser(newUser);
-    closeModal();
-    currentTab = 'usuarios';
-    App.refreshCurrentModule();
+    try {
+      // Crear usuario en Supabase Auth + Profile
+      const result = await createUser(userData);
+
+      if (result.error) {
+        showToast(`Error al crear usuario: ${result.error}`, 'error');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `${Icons.plus} Crear Usuario`;
+        return;
+      }
+
+      showToast('Usuario creado exitosamente', 'success');
+      closeModal();
+      currentTab = 'usuarios';
+      App.refreshCurrentModule();
+    } catch (error) {
+      console.error('Error creating user:', error);
+      showToast(`Error: ${error.message}`, 'error');
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = `${Icons.plus} Crear Usuario`;
+    }
   };
 
   const editUser = (username) => {

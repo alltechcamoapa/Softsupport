@@ -344,7 +344,11 @@ const PedidosModule = (() => {
     const renderFormModal = (pedido = null) => {
         const isEdit = pedido !== null;
         const clientes = DataService.getClientesSync();
-        currentItems = isEdit ? [...(pedido.items || [])] : [{ descripcion: '', cantidad: 1, precioUnitario: 0, total: 0 }];
+
+        // Obtener técnicos para el selector
+        const tecnicos = DataService.getUsersSync ? DataService.getUsersSync().filter(u => u.role === 'Tecnico') : [];
+
+        currentItems = isEdit ? [...(pedido.items || [])].map(item => ({ ...item, completado: item.completado || false })) : [{ descripcion: '', cantidad: 1, precioUnitario: 0, total: 0, completado: false }];
 
         return `
             <div class="modal-overlay open" onclick="PedidosModule.closeModal(event)">
@@ -355,6 +359,14 @@ const PedidosModule = (() => {
                     </div>
                     <form class="modal__body" id="pedidoForm" onsubmit="PedidosModule.handleSubmit(event)">
                         <input type="hidden" name="pedidoId" value="${pedido?.pedidoId || ''}">
+                        
+                        <!-- Nombre de Lista -->
+                        <div class="form-group">
+                            <label class="form-label">📝 Nombre de la Lista</label>
+                            <input type="text" name="nombreLista" class="form-input" 
+                                   value="${pedido?.nombreLista || ''}"
+                                   placeholder="Ej: Pedido Enero 2026, Lista oficina central, etc.">
+                        </div>
                         
                         <div class="form-row">
                             <div class="form-group" style="flex: 2;">
@@ -387,6 +399,17 @@ const PedidosModule = (() => {
                                        value="${pedido?.fecha?.split('T')[0] || new Date().toISOString().split('T')[0]}" required>
                             </div>
                             <div class="form-group">
+                                <label class="form-label">👨‍🔧 Técnico Asignado</label>
+                                <select name="tecnicoAsignado" class="form-select">
+                                    <option value="">Sin asignar</option>
+                                    ${tecnicos.map(tec => `
+                                        <option value="${tec.username}" ${pedido?.tecnicoAsignado === tec.username ? 'selected' : ''}>
+                                            ${tec.name || tec.username}
+                                        </option>
+                                    `).join('')}
+                                </select>
+                            </div>
+                            <div class="form-group">
                                 <label class="form-label">Prioridad</label>
                                 <select name="prioridad" class="form-select">
                                     <option value="Normal" ${pedido?.prioridad === 'Normal' ? 'selected' : ''}>Normal</option>
@@ -394,6 +417,9 @@ const PedidosModule = (() => {
                                     <option value="Urgente" ${pedido?.prioridad === 'Urgente' ? 'selected' : ''}>🔥 Urgente</option>
                                 </select>
                             </div>
+                        </div>
+
+                        <div class="form-row">
                             <div class="form-group">
                                 <label class="form-label">Estado</label>
                                 <select name="estado" class="form-select">
@@ -443,20 +469,25 @@ const PedidosModule = (() => {
     // ========== ITEMS EDITOR ==========
     const renderItemsEditor = () => {
         return currentItems.map((item, index) => `
-            <div class="pedido-item" data-index="${index}" style="display: flex; gap: var(--spacing-sm); align-items: center; margin-bottom: var(--spacing-sm); padding: var(--spacing-sm); background: var(--bg-secondary); border-radius: var(--border-radius-md);">
-                <input type="number" class="form-input" style="width: 70px;" 
+            <div class="pedido-item" data-index="${index}" style="display: flex; gap: var(--spacing-sm); align-items: center; margin-bottom: var(--spacing-sm); padding: var(--spacing-sm); background: var(--bg-secondary); border-radius: var(--border-radius-md); ${item.completado ? 'opacity: 0.6;' : ''}">
+                <input type="checkbox" 
+                       ${item.completado ? 'checked' : ''}
+                       onchange="PedidosModule.toggleItemComplete(${index}, this.checked)"
+                       style="cursor: pointer; width: 20px; height: 20px;"
+                       title="Marcar como completado">
+                <input type="number" class="form-input" style="width: 70px; ${item.completado ? 'text-decoration: line-through;' : ''}" 
                        value="${item.cantidad}" min="1" step="1"
                        placeholder="Cant."
                        onchange="PedidosModule.updateItem(${index}, 'cantidad', this.value)">
-                <input type="text" class="form-input" style="flex: 1;" 
+                <input type="text" class="form-input" style="flex: 1; ${item.completado ? 'text-decoration: line-through;' : ''}" 
                        value="${item.descripcion}"
                        placeholder="Descripción del producto/servicio"
                        onchange="PedidosModule.updateItem(${index}, 'descripcion', this.value)">
-                <input type="number" class="form-input" style="width: 100px;" 
+                <input type="number" class="form-input" style="width: 100px; ${item.completado ? 'text-decoration: line-through;' : ''}" 
                        value="${item.precioUnitario}" min="0" step="0.01"
                        placeholder="Precio"
                        onchange="PedidosModule.updateItem(${index}, 'precioUnitario', this.value)">
-                <span style="min-width: 80px; text-align: right; font-weight: var(--font-weight-semibold);">$${(item.total || 0).toFixed(2)}</span>
+                <span style="min-width: 80px; text-align: right; font-weight: var(--font-weight-semibold); ${item.completado ? 'text-decoration: line-through;' : ''}">$${(item.total || 0).toFixed(2)}</span>
                 ${currentItems.length > 1 ? `
                     <button type="button" class="btn btn--ghost btn--icon btn--sm text-danger" onclick="PedidosModule.removeItem(${index})">
                         ${Icons.trash}
@@ -467,7 +498,7 @@ const PedidosModule = (() => {
     };
 
     const addItem = () => {
-        currentItems.push({ descripcion: '', cantidad: 1, precioUnitario: 0, total: 0 });
+        currentItems.push({ descripcion: '', cantidad: 1, precioUnitario: 0, total: 0, completado: false });
         document.getElementById('pedidoItems').innerHTML = renderItemsEditor();
     };
 
@@ -477,6 +508,11 @@ const PedidosModule = (() => {
             document.getElementById('pedidoItems').innerHTML = renderItemsEditor();
             calculateTotals();
         }
+    };
+
+    const toggleItemComplete = (index, checked) => {
+        currentItems[index].completado = checked;
+        document.getElementById('pedidoItems').innerHTML = renderItemsEditor();
     };
 
     const updateItem = (index, field, value) => {
@@ -527,11 +563,13 @@ const PedidosModule = (() => {
         const formData = new FormData(form);
 
         const pedidoData = {
+            nombreLista: formData.get('nombreLista'),
             clienteId: formData.get('clienteId'),
             categoria: formData.get('categoria'),
             fecha: formData.get('fecha'),
             prioridad: formData.get('prioridad'),
             estado: formData.get('estado'),
+            tecnicoAsignado: formData.get('tecnicoAsignado'),
             notas: formData.get('notas'),
             items: currentItems.filter(i => i.descripcion.trim() !== ''),
             total: currentItems.reduce((sum, item) => sum + (item.total || 0), 0)
@@ -1077,6 +1115,7 @@ const PedidosModule = (() => {
         generateFechaReport,
         generateFechaReport,
         addItem,
+        toggleItemComplete,
         // Categories
         openCategoriasModal,
         addCategoria,

@@ -181,6 +181,69 @@ const signOut = async () => {
 };
 
 /**
+ * Crear nuevo usuario con Supabase Auth
+ */
+const createUser = async (userData) => {
+    const client = getSupabaseClient();
+    if (!client) return { error: 'Supabase not initialized' };
+
+    try {
+        // 1. Crear usuario en Supabase Auth
+        const { data: authData, error: authError } = await client.auth.admin.createUser({
+            email: userData.email,
+            password: userData.password,
+            email_confirm: true,
+            user_metadata: {
+                full_name: userData.name,
+                username: userData.username
+            }
+        });
+
+        if (authError) {
+            console.error('Error creating auth user:', authError);
+            return { error: authError.message };
+        }
+
+        // 2. Buscar el role_id basado en el nombre del rol
+        const { data: roleData, error: roleError } = await client
+            .from('roles')
+            .select('id')
+            .eq('name', userData.role)
+            .single();
+
+        if (roleError) {
+            console.error('Error fetching role:', roleError);
+            // Si no se encuentra el rol, usar un rol por defecto o null
+        }
+
+        // 3. Crear perfil en la tabla profiles
+        const { data: profileData, error: profileError } = await client
+            .from('profiles')
+            .insert([{
+                id: authData.user.id,
+                full_name: userData.name,
+                username: userData.username,
+                email: userData.email,
+                role_id: roleData?.id || null,
+                allowed_modules: userData.allowedModules || []
+            }])
+            .select()
+            .single();
+
+        if (profileError) {
+            console.error('Error creating profile:', profileError);
+            return { error: profileError.message };
+        }
+
+        console.log('✅ Usuario creado exitosamente:', profileData);
+        return { data: profileData, success: true };
+    } catch (error) {
+        console.error('Error in createUser:', error);
+        return { error: error.message };
+    }
+};
+
+/**
  * Escuchar cambios en el estado de autenticación
  */
 const onAuthStateChange = (callback) => {
@@ -228,6 +291,7 @@ if (typeof module !== 'undefined' && module.exports) {
         getCurrentProfile,
         signIn,
         signOut,
+        createUser,
         onAuthStateChange,
         handleSupabaseError
     };
