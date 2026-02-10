@@ -270,7 +270,7 @@ const ProformasModule = (() => {
               </div>
               <div class="form-group">
                 <label class="form-label">Moneda</label>
-                <select name="moneda" class="form-select">
+                <select name="moneda" class="form-select" onchange="ProformasModule.updateCurrencySymbols(this.value)">
                   <option value="USD" ${proforma?.moneda === 'USD' ? 'selected' : ''}>USD ($)</option>
                   <option value="NIO" ${proforma?.moneda === 'NIO' ? 'selected' : ''}>NIO (C$)</option>
                 </select>
@@ -482,6 +482,9 @@ const ProformasModule = (() => {
           </div>
           <div class="modal__footer">
             <button class="btn btn--secondary" onclick="ProformasModule.closeModal()">Cerrar</button>
+            <button class="btn btn--success" onclick="ProformasModule.sendViaWhatsApp('${proforma.proformaId}')" title="Enviar por WhatsApp">
+              ${Icons.messageCircle || '💬'} WhatsApp
+            </button>
             <button class="btn btn--primary" onclick="ProformasModule.generatePDF('${proforma.proformaId}')">${Icons.fileText} Generar PDF</button>
           </div>
         </div>
@@ -923,6 +926,84 @@ const ProformasModule = (() => {
     currentItems = [];
   };
 
+  // ========== WHATSAPP INTEGRATION ==========
+  const sendViaWhatsApp = async (proformaId) => {
+    const proforma = DataService.getProformaById(proformaId);
+    if (!proforma) {
+      alert('Proforma no encontrada');
+      return;
+    }
+
+    const cliente = DataService.getClienteById(proforma.clienteId);
+    if (!cliente || !cliente.telefono) {
+      alert('Cliente no tiene teléfono registrado');
+      return;
+    }
+
+    // Formatear items para el mensaje
+    const itemsList = proforma.items.map((item, index) => {
+      const total = item.cantidad * item.precioUnitario;
+      return `${index + 1}. ${item.descripcion}\n   Cant: ${item.cantidad} x $${item.precioUnitario.toFixed(2)} = $${total.toFixed(2)}`;
+    }).join('\n\n');
+
+    // Calcular totales
+    const subtotal = proforma.items.reduce((sum, item) =>
+      sum + (item.cantidad * item.precioUnitario), 0
+    );
+    const divisa = proforma.moneda || 'USD';
+
+    // Preparar variables para el template
+    const templateVars = {
+      cliente: cliente.nombre,
+      proformaId: proforma.proformaId,
+      items: itemsList,
+      total: `${subtotal.toFixed(2)} ${divisa}`
+    };
+
+    // Enviar via WhatsApp usando template
+    const result = await WhatsAppService.sendTemplate(
+      cliente.telefono,
+      'proforma_enviada',
+      templateVars
+    );
+
+    if (result.success) {
+      alert('WhatsApp abierto. Por favor confirma el envío del mensaje.');
+      if (typeof LogService !== 'undefined') {
+        LogService.log('proformas', 'whatsapp', proformaId,
+          `Proforma enviada por WhatsApp a ${cliente.nombre}`);
+      }
+    } else {
+      alert('Error al abrir WhatsApp: ' + result.error);
+    }
+  };
+
+  // ========== CURRENCY MANAGEMENT ==========
+  const updateCurrencySymbols = (moneda) => {
+    const symbol = moneda === 'USD' ? '$' : 'C$';
+
+    // Update all currency symbols in the form
+    const subtotalEl = document.getElementById('proformaSubtotal');
+    const totalEl = document.getElementById('proformaTotal');
+
+    if (subtotalEl) {
+      const currentSubtotal = parseFloat(subtotalEl.textContent.replace(/[^0-9.]/g, '')) || 0;
+      subtotalEl.textContent = `${symbol}${currentSubtotal.toFixed(2)}`;
+    }
+
+    if (totalEl) {
+      const currentTotal = parseFloat(totalEl.textContent.replace(/[^0-9.]/g, '')) || 0;
+      totalEl.textContent = `${symbol}${currentTotal.toFixed(2)}`;
+    }
+
+    // Update item totals
+    const itemTotals = document.querySelectorAll('.proforma-item__total');
+    itemTotals.forEach(el => {
+      const currentValue = parseFloat(el.textContent.replace(/[^0-9.]/g, '')) || 0;
+      el.textContent = `${symbol}${currentValue.toFixed(2)}`;
+    });
+  };
+
   // ========== PUBLIC API ==========
   return {
     render,
@@ -941,6 +1022,8 @@ const ProformasModule = (() => {
     openReportModal,
     generateClienteReport,
     generateRangoReport,
-    aprobarProforma
+    aprobarProforma,
+    sendViaWhatsApp,
+    updateCurrencySymbols
   };
 })();

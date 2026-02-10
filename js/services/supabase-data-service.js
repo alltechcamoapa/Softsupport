@@ -833,6 +833,123 @@ const SupabaseDataService = (() => {
         return { success: true };
     };
 
+    // ========== EMPLEADOS ==========
+    const getEmpleadosSync = async () => {
+        if (!client) return [];
+
+        const { data, error } = await client
+            .from('empleados')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('Error fetching empleados:', error);
+            return [];
+        }
+
+        return data || [];
+    };
+
+    const getEmpleadoById = async (id) => {
+        if (!client) return null;
+
+        const { data, error } = await client
+            .from('empleados')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (error) {
+            console.error('Error fetching empleado:', error);
+            return null;
+        }
+
+        return data;
+    };
+
+    const createEmpleado = async (empleadoData) => {
+        if (!client) return { error: 'Not initialized' };
+
+        // Preparar datos para Supabase
+        const dataToInsert = {
+            nombre: empleadoData.nombre,
+            cedula: empleadoData.cedula,
+            email: empleadoData.email || null,
+            telefono: empleadoData.telefono || null,
+            cargo: empleadoData.cargo,
+            fecha_alta: empleadoData.fechaAlta,
+            tipo_salario: empleadoData.tipoSalario,
+            salario_total: empleadoData.salarioTotal,
+            tipo_contrato: empleadoData.tipoContrato,
+            tiempo_contrato: empleadoData.tiempoContrato || null,
+            estado: empleadoData.estado || 'Activo',
+            vacaciones_tomadas: empleadoData.vacacionesTomadas || 0,
+            aguinaldo_pagado: empleadoData.aguinaldoPagado || false,
+            observaciones: empleadoData.observaciones || null
+        };
+
+        const { data, error } = await client
+            .from('empleados')
+            .insert([dataToInsert])
+            .select()
+            .single();
+
+        if (error) {
+            return { error: handleSupabaseError(error, 'createEmpleado') };
+        }
+
+        return { success: true, data };
+    };
+
+    const updateEmpleado = async (id, empleadoData) => {
+        if (!client) return { error: 'Not initialized' };
+
+        // Preparar datos para actualizar
+        const dataToUpdate = {};
+        if (empleadoData.nombre) dataToUpdate.nombre = empleadoData.nombre;
+        if (empleadoData.cedula) dataToUpdate.cedula = empleadoData.cedula;
+        if (empleadoData.email !== undefined) dataToUpdate.email = empleadoData.email;
+        if (empleadoData.telefono !== undefined) dataToUpdate.telefono = empleadoData.telefono;
+        if (empleadoData.cargo) dataToUpdate.cargo = empleadoData.cargo;
+        if (empleadoData.fechaAlta) dataToUpdate.fecha_alta = empleadoData.fechaAlta;
+        if (empleadoData.tipoSalario) dataToUpdate.tipo_salario = empleadoData.tipoSalario;
+        if (empleadoData.salarioTotal !== undefined) dataToUpdate.salario_total = empleadoData.salarioTotal;
+        if (empleadoData.tipoContrato) dataToUpdate.tipo_contrato = empleadoData.tipoContrato;
+        if (empleadoData.tiempoContrato !== undefined) dataToUpdate.tiempo_contrato = empleadoData.tiempoContrato;
+        if (empleadoData.estado) dataToUpdate.estado = empleadoData.estado;
+        if (empleadoData.vacacionesTomadas !== undefined) dataToUpdate.vacaciones_tomadas = empleadoData.vacacionesTomadas;
+        if (empleadoData.aguinaldoPagado !== undefined) dataToUpdate.aguinaldo_pagado = empleadoData.aguinaldoPagado;
+        if (empleadoData.observaciones !== undefined) dataToUpdate.observaciones = empleadoData.observaciones;
+
+        dataToUpdate.updated_at = new Date().toISOString();
+
+        const { error } = await client
+            .from('empleados')
+            .update(dataToUpdate)
+            .eq('id', id);
+
+        if (error) {
+            return { error: handleSupabaseError(error, 'updateEmpleado') };
+        }
+
+        return { success: true };
+    };
+
+    const deleteEmpleado = async (id) => {
+        if (!client) return { error: 'Not initialized' };
+
+        const { error } = await client
+            .from('empleados')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            return { error: handleSupabaseError(error, 'deleteEmpleado') };
+        }
+
+        return { success: true };
+    };
+
     // ========== PUBLIC API ==========
     return {
         // Inicialización
@@ -897,6 +1014,13 @@ const SupabaseDataService = (() => {
         createPedido,
         updatePedido,
         deletePedido,
+
+        // Empleados
+        getEmpleadosSync,
+        getEmpleadoById,
+        createEmpleado,
+        updateEmpleado,
+        deleteEmpleado,
 
         // Helpers
         generateCode

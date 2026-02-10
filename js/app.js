@@ -20,6 +20,7 @@ const App = (() => {
       { id: 'productos', label: 'Productos / Servicios', icon: Icons.package },
       { id: 'equipos', label: 'Equipos', icon: Icons.monitor },
       { id: 'software', label: 'Software', icon: Icons.monitor },
+      { id: 'prestaciones', label: 'Prestaciones', icon: Icons.dollarSign },
       { id: 'calendario', label: 'Calendario', icon: Icons.calendar },
       { id: 'reportes', label: 'Reportes', icon: Icons.barChart },
       { id: 'configuracion', label: 'Configuración', icon: Icons.settings }
@@ -754,6 +755,9 @@ const App = (() => {
         break;
       case 'calendario':
         moduleContent = CalendarioModule.render();
+        break;
+      case 'prestaciones':
+        moduleContent = PrestacionesModule.render();
         break;
       case 'reportes':
         moduleContent = ReportesModule.render();

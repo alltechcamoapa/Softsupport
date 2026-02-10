@@ -16,6 +16,7 @@ const DataService = (() => {
         productos: [],
         proformas: [],
         pedidos: [],
+        empleados: [],
         users: [],
         config: {
             monedaPrincipal: 'USD',
@@ -75,7 +76,8 @@ const DataService = (() => {
                 visitas,
                 productos,
                 proformas,
-                pedidos
+                pedidos,
+                empleados
             ] = await Promise.all([
                 SupabaseDataService.getClientesSync(),
                 SupabaseDataService.getContratosSync(),
@@ -83,7 +85,8 @@ const DataService = (() => {
                 SupabaseDataService.getVisitasSync(),
                 SupabaseDataService.getProductosSync(),
                 SupabaseDataService.getProformasSync(),
-                SupabaseDataService.getPedidosSync()
+                SupabaseDataService.getPedidosSync(),
+                SupabaseDataService.getEmpleadosSync?.() || Promise.resolve([])
             ]);
 
             // Normalizar y almacenar en caché
@@ -109,6 +112,7 @@ const DataService = (() => {
                 clienteId: p.cliente_id,
                 cliente: p.cliente ? normalizeSupabaseData('clientes', p.cliente) : null
             }));
+            cache.empleados = (empleados || []).map(e => ({ ...e }));
 
             // Cargar permisos por defecto (hardcoded por seguridad)
             cache.permissions = loadDefaultPermissions();
@@ -877,6 +881,81 @@ const DataService = (() => {
     const getContractTemplateById = () => null;
     const saveContractTemplate = () => { };
     const deleteContractTemplate = () => { };
+
+    // ========== EMPLEADOS ==========
+    const getEmpleadosSync = () => [...(cache.empleados || [])];
+
+    const getEmpleadosFiltered = (filters = {}) => {
+        let filtered = getEmpleadosSync();
+
+        if (filters.estado) {
+            filtered = filtered.filter(e => e.estado === filters.estado);
+        }
+        if (filters.search) {
+            const searchLower = filters.search.toLowerCase();
+            filtered = filtered.filter(e =>
+                e.nombre?.toLowerCase().includes(searchLower) ||
+                e.cedula?.includes(searchLower) ||
+                e.cargo?.toLowerCase().includes(searchLower)
+            );
+        }
+
+        return filtered;
+    };
+
+    const getEmpleadoById = (id) => {
+        return cache.empleados?.find(e => e.id === id) || null;
+    };
+
+    const createEmpleado = async (data) => {
+        const newData = {
+            ...data,
+            id: generateUUID(),
+            createdAt: new Date().toISOString(),
+            estado: data.estado || 'Activo',
+            vacacionesTomadas: 0,
+            aguinaldoPagado: false
+        };
+
+        const res = await SupabaseDataService.createEmpleado?.(newData);
+        if (res?.success) {
+            if (!cache.empleados) cache.empleados = [];
+            cache.empleados.push(newData);
+            LogService.log('empleados', 'create', newData.id, `Empleado creado: ${newData.nombre}`);
+            return newData;
+        }
+        throw new Error(res?.error || 'Error al crear empleado');
+    };
+
+    const updateEmpleado = async (id, data) => {
+        const current = getEmpleadoById(id);
+        const uuid = current ? current.id : id;
+
+        const res = await SupabaseDataService.updateEmpleado?.(uuid, data);
+        if (res?.success) {
+            const idx = cache.empleados.findIndex(e => e.id === uuid);
+            if (idx !== -1) {
+                cache.empleados[idx] = { ...cache.empleados[idx], ...data, updatedAt: new Date().toISOString() };
+            }
+            LogService.log('empleados', 'update', uuid, `Empleado actualizado: ${current?.nombre || id}`);
+            return true;
+        }
+        throw new Error(res?.error || 'Error al actualizar empleado');
+    };
+
+    const deleteEmpleado = async (id) => {
+        const current = getEmpleadoById(id);
+        const uuid = current ? current.id : id;
+
+        const res = await SupabaseDataService.deleteEmpleado?.(uuid);
+        if (res?.success) {
+            cache.empleados = cache.empleados.filter(e => e.id !== uuid);
+            LogService.log('empleados', 'delete', uuid, `Empleado eliminado: ${current?.nombre || id}`);
+            return true;
+        }
+        throw new Error(res?.error || 'Error al eliminar empleado');
+    };
+
     const resetData = () => location.reload();
 
 
@@ -914,6 +993,9 @@ const DataService = (() => {
 
         // Pedidos
         getPedidosSync, getPedidoById, getPedidosByCliente, getNextPedidoNumber, createPedido, updatePedido, deletePedido, getPedidosStats,
+
+        // Empleados
+        getEmpleadosSync, getEmpleadosFiltered, getEmpleadoById, createEmpleado, updateEmpleado, deleteEmpleado,
 
         getContractTemplates, getContractTemplateById, saveContractTemplate, deleteContractTemplate
     };

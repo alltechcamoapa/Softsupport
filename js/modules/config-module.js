@@ -834,6 +834,45 @@ const ConfigModule = (() => {
               </select>
             </div>
             
+            <!-- Información Laboral -->
+            <div style="margin-top: var(--spacing-lg); padding-top: var(--spacing-lg); border-top: 1px solid var(--border-color);">
+              <h4 style="margin-bottom: var(--spacing-md); font-size: var(--font-size-md);">Información Laboral</h4>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Fecha de Alta</label>
+                  <input type="date" name="fechaAlta" class="form-input" 
+                         value="${new Date().toISOString().split('T')[0]}">
+                  <span class="form-hint">Fecha de ingreso a la empresa</span>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Tipo de Salario</label>
+                  <select name="tipoSalario" class="form-select">
+                    <option value="">Sin especificar</option>
+                    <option value="Mensual">Mensual</option>
+                    <option value="Quincenal">Quincenal</option>
+                    <option value="Por Hora">Por Hora</option>
+                    <option value="Por Proyecto">Por Proyecto</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Total de Salario (C$)</label>
+                  <input type="number" name="salarioTotal" class="form-input" 
+                         step="0.01" min="0" placeholder="0.00">
+                  <span class="form-hint">Salario bruto mensual</span>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Tiempo de Contrato (meses)</label>
+                  <input type="number" name="tiempoContrato" class="form-input" 
+                         min="1" placeholder="Dejar vacío si es indefinido">
+                  <span class="form-hint">Solo para contratos temporales</span>
+                </div>
+              </div>
+            </div>
+            
             <div class="form-group">
               <label class="form-label">Módulos Accesibles</label>
               <p class="text-xs text-muted" style="margin-bottom: var(--spacing-sm);">
@@ -877,7 +916,12 @@ const ConfigModule = (() => {
       email: formData.get('email'),
       password: formData.get('password'),
       role: formData.get('role'),
-      allowedModules: selectedModules
+      allowedModules: selectedModules,
+      // Campos laborales
+      fechaAlta: formData.get('fechaAlta') || null,
+      tipoSalario: formData.get('tipoSalario') || null,
+      salarioTotal: formData.get('salarioTotal') ? parseFloat(formData.get('salarioTotal')) : null,
+      tiempoContrato: formData.get('tiempoContrato') ? parseInt(formData.get('tiempoContrato')) : null
     };
 
     try {

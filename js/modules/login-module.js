@@ -28,16 +28,16 @@ const LoginModule = (() => {
                     <!-- Formulario -->
                     <form id="loginForm" onsubmit="event.preventDefault(); LoginModule.handleLogin();" style="margin-bottom: 32px;">
                         
-                        <!-- Email -->
+                        <!-- Username -->
                         <div style="margin-bottom: 20px;">
-                            <label for="loginEmail" style="color: #cbd5e1; font-size: 14px; font-weight: 600; display: block; margin-bottom: 10px;">Correo Electrónico</label>
+                            <label for="loginUsername" style="color: #cbd5e1; font-size: 14px; font-weight: 600; display: block; margin-bottom: 10px;">Nombre de Usuario</label>
                             <input 
-                                type="email" 
-                                id="loginEmail" 
-                                name="email" 
+                                type="text" 
+                                id="loginUsername" 
+                                name="username" 
                                 required 
-                                placeholder="usuario@ejemplo.com"
-                                autocomplete="email"
+                                placeholder="admin"
+                                autocomplete="username"
                                 style="width: 100%; padding: 14px 16px; background: rgba(255, 255, 255, 0.05); border: 1px solid #444444; border-radius: 10px; color: #ffffff; font-size: 15px; outline: none; transition: all 0.2s; box-sizing: border-box;"
                                 onfocus="this.style.borderColor='#1a73e8'; this.style.background='rgba(26, 115, 232, 0.15)'"
                                 onblur="this.style.borderColor='#444444'; this.style.background='rgba(255, 255, 255, 0.05)'"
@@ -89,27 +89,21 @@ const LoginModule = (() => {
     const handleLogin = async () => {
         if (isLoading) return;
 
-        const email = document.getElementById('loginEmail')?.value.trim();
+        const username = document.getElementById('loginUsername')?.value.trim();
         const password = document.getElementById('loginPassword')?.value;
 
-        console.log('📧 Login attempt:', email);
+        console.log('👤 Login attempt:', username);
 
         // Validación básica
-        if (!email || !password) {
+        if (!username || !password) {
             showError('⚠️ Por favor completa todos los campos');
             return;
         }
 
-        // Validar formato de email
-        if (!email.includes('@')) {
-            showError('⚠️ Ingresa un email válido\n(ejemplo: usuario@ejemplo.com)');
-            return;
-        }
-
-        // Verificar que Supabase esté disponible
-        if (typeof signIn !== 'function') {
-            showError('❌ Error: Supabase no está inicializado.\nRecarga la página (Ctrl+F5)');
-            console.error('❌ signIn function not found');
+        // Verificar que DataService esté disponible
+        if (typeof DataService === 'undefined') {
+            showError('❌ Error: Sistema no inicializado.\nRecarga la página (Ctrl+F5)');
+            console.error('❌ DataService not found');
             return;
         }
 
@@ -118,10 +112,10 @@ const LoginModule = (() => {
         hideError();
 
         try {
-            console.log('🔐 Intentando autenticación con Supabase...');
+            console.log('🔐 Autenticando por username...');
 
-            // Llamar a signIn de supabase.js
-            const result = await signIn(email, password);
+            // Autenticar por username usando DataService
+            const result = await DataService.authenticateUser(username, password);
 
             console.log('📊 Resultado completo:', result);
 
@@ -182,7 +176,7 @@ const LoginModule = (() => {
                 id: profile.id,
                 username: profile.username,
                 name: profile.full_name,
-                email: result.data.user.email || email,
+                email: result.data.user.email || '', // Email opcional
                 role: profile.role?.name || 'Usuario',
                 role_id: profile.role_id
             };
