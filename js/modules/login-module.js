@@ -121,21 +121,26 @@ const LoginModule = (() => {
 
             // Verificar si hay error
             if (result.error) {
-                const errorMsg = result.error;
+                const errorMsg = result.error.message || result.error; // Asegurar mensaje string
 
                 // Mensajes más específicos
-                if (errorMsg.toLowerCase().includes('invalid')) {
-                    showError('❌ Email o contraseña incorrectos\n\nVerifica tus credenciales.');
-                } else if (errorMsg.toLowerCase().includes('not confirmed')) {
-                    showError('⚠️ Tu cuenta no está confirmada\n\nContacta al administrador.');
-                } else if (errorMsg.toLowerCase().includes('not found')) {
-                    showError('❌ Usuario no encontrado\n\n¿Ya creaste tu cuenta en Supabase?');
+                let userFriendlyMsg = '';
+                if (typeof errorMsg === 'string' && errorMsg.toLowerCase().includes('invalid')) {
+                    userFriendlyMsg = '❌ Contraseña incorrecta o usuario no existe.';
+                } else if (typeof errorMsg === 'string' && errorMsg.toLowerCase().includes('not confirmed')) {
+                    userFriendlyMsg = '⚠️ Tu cuenta no está confirmada. Revisa tu correo.';
+                } else if (typeof errorMsg === 'string' && errorMsg.toLowerCase().includes('not found')) {
+                    userFriendlyMsg = '❌ Usuario no encontrado.';
                 } else {
-                    showError('❌ Error: ' + errorMsg);
+                    userFriendlyMsg = '❌ Error: ' + errorMsg;
                 }
 
+                // Mostrar error detallado para debug si es admin o localhost
+                console.error('❌ Login Error Details:', result);
+                alert(`Error de Inicio de Sesión:\n\n${userFriendlyMsg}\n\nDetalle técnico: ${JSON.stringify(result.error)}`);
+
+                showError(userFriendlyMsg);
                 setLoading(false);
-                console.error('❌ Error de login:', errorMsg);
                 return;
             }
 

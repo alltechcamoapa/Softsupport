@@ -222,6 +222,9 @@ const DataService = (() => {
             "productos": { create: true, read: true, update: true, delete: true },
             "pedidos": { create: true, read: true, update: true, delete: true },
             "proformas": { create: true, read: true, update: true, delete: true },
+            "prestaciones": { create: true, read: true, update: true, delete: true },
+            "calendario": { create: true, read: true, update: true, delete: true },
+            "reportes": { create: true, read: true, update: true, delete: true },
             "usuarios": { create: true, read: true, update: true, delete: true },
             "configuracion": { create: true, read: true, update: true, delete: true },
             "editor-reportes": { create: true, read: true, update: true, delete: true }
@@ -235,6 +238,9 @@ const DataService = (() => {
             "productos": { create: true, read: true, update: true, delete: false },
             "pedidos": { create: true, read: true, update: true, delete: false },
             "proformas": { create: true, read: true, update: true, delete: false },
+            "prestaciones": { create: false, read: true, update: false, delete: false },
+            "calendario": { create: false, read: true, update: false, delete: false },
+            "reportes": { create: false, read: true, update: false, delete: false },
             "usuarios": { create: false, read: false, update: false, delete: false },
             "configuracion": { create: false, read: true, update: false, delete: false },
             "editor-reportes": { create: false, read: true, update: false, delete: false }
@@ -248,6 +254,9 @@ const DataService = (() => {
             "productos": { create: false, read: true, update: false, delete: false },
             "pedidos": { create: false, read: true, update: true, delete: false },
             "proformas": { create: false, read: true, update: false, delete: false },
+            "prestaciones": { create: false, read: true, update: false, delete: false },
+            "calendario": { create: false, read: true, update: false, delete: false },
+            "reportes": { create: false, read: true, update: false, delete: false },
             "usuarios": { create: false, read: false, update: false, delete: false },
             "configuracion": { create: false, read: true, update: false, delete: false },
             "editor-reportes": { create: false, read: true, update: false, delete: false }
@@ -524,15 +533,37 @@ const DataService = (() => {
         LogService.log('configuracion', 'update', 'system', 'Configuración actualizada', cfg);
     };
 
-    // Auth Placeholders
-    const authenticateUser = () => null;
+    const authenticateUser = async (username, password) => {
+        // Delegar autenticación por username a SupabaseDataService
+        if (typeof SupabaseDataService !== 'undefined' && SupabaseDataService.authenticateUser) {
+            return await SupabaseDataService.authenticateUser(username, password);
+        }
+        return { error: 'Servicio de autenticación no disponible' };
+    };
     const getUsers = () => cache.users;
     const getUsersSync = () => cache.users;
     const getUserByUsername = () => null;
     const createUser = async (data) => {
-        console.warn('⚠️ Creación de usuarios client-side limitada');
-        alert('LIMITACIÓN DE SEGURIDAD:\n\nNo se pueden crear usuarios directamente desde la aplicación sin una función de servidor (Edge Function).\n\nPor favor, pide al usuario que se registre en la pantalla de inicio, o créalo desde el panel de control de Supabase.\n\nUna vez registrado, podrás asignarle roles aquí.');
-        return null;
+        // Implementación con Supabase (nota: puede cerrar la sesión actual)
+        if (confirm('⚠️ ADVERTENCIA:\n\nAl crear un nuevo usuario con Supabase Auth, se iniciará sesión automáticamente con el nuevo usuario.')) {
+            const res = await SupabaseDataService.createUser(data);
+            if (res.user) {
+                if (!cache.users) cache.users = [];
+                // Intentar obtener el username del metadata o usar el nombre
+                const newUser = {
+                    id: res.user.id,
+                    username: data.username,
+                    name: data.name,
+                    email: data.email,
+                    role: data.role
+                };
+                cache.users.push(newUser);
+                LogService.log('configuracion', 'create', newUser.id, `Usuario creado: ${newUser.username}`);
+                return { success: true, user: newUser };
+            }
+            return { error: 'Error al crear usuario' };
+        }
+        return { error: 'Cancelado por el usuario' };
     };
     const updateUser = () => { };
     const deleteUser = () => { };
@@ -997,7 +1028,43 @@ const DataService = (() => {
         // Empleados
         getEmpleadosSync, getEmpleadosFiltered, getEmpleadoById, createEmpleado, updateEmpleado, deleteEmpleado,
 
-        getContractTemplates, getContractTemplateById, saveContractTemplate, deleteContractTemplate
+        getContractTemplates, getContractTemplateById, saveContractTemplate, deleteContractTemplate,
+
+        // Prestaciones
+        getVacacionesByEmpleado: (id) => SupabaseDataService.getVacacionesByEmpleado(id),
+        createVacacion: async (data) => {
+            const res = await SupabaseDataService.createVacacion(data);
+            if (res.success) {
+                // Update local cache if needed
+                const emp = getEmpleadoById(data.empleadoId);
+                if (emp) emp.vacacionesTomadas = (emp.vacacionesTomadas || 0) + data.dias;
+                return res.data;
+            }
+            throw new Error(res.error);
+        },
+        deleteVacacion: async (id) => {
+            const res = await SupabaseDataService.deleteVacacion(id);
+            if (res.success) return true;
+            throw new Error(res.error);
+        },
+
+        getAguinaldosByEmpleado: (id) => SupabaseDataService.getAguinaldosByEmpleado(id),
+        createAguinaldo: async (data) => {
+            const res = await SupabaseDataService.createAguinaldo(data);
+            if (res.success) {
+                const emp = getEmpleadoById(data.empleadoId);
+                if (emp && data.anio === new Date().getFullYear()) emp.aguinaldoPagado = true;
+                return res.data;
+            }
+            throw new Error(res.error);
+        },
+
+        getNominasByEmpleado: (id) => SupabaseDataService.getNominasByEmpleado(id),
+        createNomina: async (data) => {
+            const res = await SupabaseDataService.createNomina(data);
+            if (res.success) return res.data;
+            throw new Error(res.error);
+        }
     };
 })();
 

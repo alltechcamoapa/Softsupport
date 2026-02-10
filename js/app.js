@@ -106,6 +106,7 @@ const App = (() => {
       productos: 'Productos y Servicios',
       equipos: 'Equipos',
       software: 'Software y Licencias',
+      prestaciones: 'Prestaciones Laborales',
       calendario: 'Calendario',
       reportes: 'Reportes',
       configuracion: 'Configuración'

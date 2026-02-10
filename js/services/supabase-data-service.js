@@ -497,16 +497,109 @@ const SupabaseDataService = (() => {
     };
 
     // ========== AUTHENTICACIÓN ==========
+    // ========== AUTHENTICACIÓN ==========
     const authenticateUser = async (username, password) => {
-        // En Supabase usamos email, no username
-        // Por compatibilidad, asumimos que username puede ser email
-        const result = await signIn(username, password);
+        if (!client) return { error: 'Not initialized' };
 
-        if (result.error) {
-            return null;
+        console.log('🔄 Buscando email para usuario:', username);
+
+        // 1. Buscar email por username usando RPC
+        const { data: userData, error: lookError } = await client
+            .rpc('get_email_by_username', { p_username: username });
+
+        if (lookError) {
+            console.error('❌ Error buscando usuario:', lookError);
+
+            // INTENTO DE RECUPERACIÓN (FALLBACK)
+            if (!username.includes('@')) {
+                const tryEmail = `${username}@alltech.local`;
+                const res = await signIn(tryEmail, password);
+                if (!res.error) return res;
+            }
+
+            // Fallback: intentar login directo asumiendo que username es email (si tiene @)
+            if (username.includes('@')) {
+                return await signIn(username, password);
+            }
+            return { error: 'Error al buscar usuario' };
         }
 
-        return await getCurrentProfile();
+        // Si no encuentra datos o array vacío
+        if (!userData || userData.length === 0) {
+            console.warn('⚠️ Usuario no encontrado:', username);
+
+            // INTENTO DE RECUPERACIÓN INTELIGENTE
+            // Si el nombre de usuario no tiene @, probamos con el dominio local
+            if (!username.includes('@')) {
+                const tryEmail = `${username}@alltech.local`;
+                console.log('🔄 Intentando login con email autogenerado:', tryEmail);
+                const res = await signIn(tryEmail, password);
+                if (!res.error) return res;
+            }
+
+            // Último intento: probar directo (quizás es email aunque no se encontró por username)
+            if (username.includes('@')) {
+                return await signIn(username, password);
+            }
+            return { error: 'Usuario no encontrado' };
+        }
+
+        const emailToLogin = userData[0].email;
+        console.log('✅ Email encontrado:', emailToLogin);
+
+        // 2. Hacer login con el email encontrado
+        return await signIn(emailToLogin, password);
+    };
+
+    const createUser = async (userData) => {
+        if (!client) return { error: 'Not initialized' };
+
+        console.log('🆕 Creando usuario en Supabase:', userData.username);
+
+        // 1. SignUp en Supabase Auth
+        // Nota: Esto iniciará sesión automáticamente con el nuevo usuario si el email no requiere confirmación
+        const { data, error } = await client.auth.signUp({
+            email: userData.email,
+            password: userData.password,
+            options: {
+                data: {
+                    username: userData.username,
+                    full_name: userData.name
+                }
+            }
+        });
+
+        if (error) {
+            console.error('❌ Error en signUp:', error);
+            return { error: error.message };
+        }
+
+        if (data.user) {
+            // Actualizar rol y campos laborales si se proveyeron
+            const roleName = userData.role || 'Usuario';
+
+            // Buscar ID del rol
+            const { data: roleData } = await client
+                .from('roles')
+                .select('id')
+                .eq('name', roleName)
+                .single();
+
+            if (roleData) {
+                // Actualizar profiles con rol y campos laborales
+                await client
+                    .from('profiles')
+                    .update({
+                        role_id: roleData.id,
+                        email: userData.email
+                    })
+                    .eq('id', data.user.id);
+            }
+
+            return { success: true, user: data.user, session: data.session };
+        }
+
+        return { error: 'No se pudo crear el usuario' };
     };
 
     // ========== REALTIME SUBSCRIPCIONES ==========
@@ -950,6 +1043,196 @@ const SupabaseDataService = (() => {
         return { success: true };
     };
 
+
+    // ========== PRESTACIONES: VACACIONES ==========
+    const getVacacionesByEmpleado = async (empleadoId) => {
+        if (!client) return [];
+
+        const { data, error } = await client
+            .from('vacaciones_historial')
+            .select('*')
+            .eq('empleado_id', empleadoId)
+            .order('fecha_inicio', { ascending: false });
+
+        if (error) {
+            console.error('Error fetching vacaciones:', error);
+            return [];
+        }
+        return data || [];
+    };
+
+    const createVacacion = async (vacacionData) => {
+        if (!client) return { error: 'Not initialized' };
+
+        // Insertar en historial
+        const { data, error } = await client
+            .from('vacaciones_historial')
+            .insert([{
+                empleado_id: vacacionData.empleadoId,
+                fecha_inicio: vacacionData.fechaInicio,
+                fecha_fin: vacacionData.fechaFin,
+                dias: vacacionData.dias,
+                anio_correspondiente: vacacionData.anioCorrespondiente,
+                observaciones: vacacionData.observaciones
+            }])
+            .select()
+            .single();
+
+        if (error) {
+            return { error: handleSupabaseError(error, 'createVacacion') };
+        }
+
+        // Actualizar contador en empleados
+        // Nota: esto debería ser una transacción o trigger, pero por simplicidad lo hacemos aquí
+        const { error: updateError } = await client.rpc('increment_vacaciones_tomadas', {
+            p_empleado_id: vacacionData.empleadoId,
+            p_dias: vacacionData.dias
+        });
+
+        // Fallback si RPC no existe: lectura y actualización manual
+        if (updateError) {
+            console.warn('⚠️ RPC increment_vacaciones_tomadas falló, usando actualización manual');
+            const emp = await getEmpleadoById(vacacionData.empleadoId);
+            if (emp) {
+                await updateEmpleado(emp.id, {
+                    vacacionesTomadas: (emp.vacaciones_tomadas || 0) + vacacionData.dias
+                });
+            }
+        }
+
+        return { success: true, data };
+    };
+
+    const updateVacacion = async (id, updates) => {
+        // Pendiente: manejar recalculo de días tomados si se cambian los días
+        if (!client) return { error: 'Not initialized' };
+
+        const { data, error } = await client
+            .from('vacaciones_historial')
+            .update(updates)
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) return { error: handleSupabaseError(error, 'updateVacacion') };
+        return { success: true, data };
+    };
+
+    const deleteVacacion = async (id) => {
+        if (!client) return { error: 'Not initialized' };
+
+        // Primero obtener para descontar días
+        const { data: vacacion } = await client
+            .from('vacaciones_historial')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        const { error } = await client
+            .from('vacaciones_historial')
+            .delete()
+            .eq('id', id);
+
+        if (error) return { error: handleSupabaseError(error, 'deleteVacacion') };
+
+        // Revertir días tomados
+        if (vacacion) {
+            const emp = await getEmpleadoById(vacacion.empleado_id);
+            if (emp) {
+                await updateEmpleado(emp.id, {
+                    vacacionesTomadas: Math.max(0, (emp.vacaciones_tomadas || 0) - vacacion.dias)
+                });
+            }
+        }
+
+        return { success: true };
+    };
+
+    // ========== PRESTACIONES: AGUINALDOS ==========
+    const getAguinaldosByEmpleado = async (empleadoId) => {
+        if (!client) return [];
+        const { data, error } = await client
+            .from('aguinaldos_historial')
+            .select('*')
+            .eq('empleado_id', empleadoId)
+            .order('anio', { ascending: false });
+
+        if (error) {
+            console.error('Error fetching aguinaldos:', error);
+            return [];
+        }
+        return data || [];
+    };
+
+    const createAguinaldo = async (aguinaldoData) => {
+        if (!client) return { error: 'Not initialized' };
+
+        const { data, error } = await client
+            .from('aguinaldos_historial')
+            .insert([{
+                empleado_id: aguinaldoData.empleadoId,
+                anio: aguinaldoData.anio,
+                monto: aguinaldoData.monto,
+                dias_calculados: aguinaldoData.diasCalculados,
+                fecha_pago: aguinaldoData.fechaPago || new Date(),
+                observaciones: aguinaldoData.observaciones
+            }])
+            .select()
+            .single();
+
+        if (error) return { error: handleSupabaseError(error, 'createAguinaldo') };
+
+        // Marcar como pagado en perfil empleado si es del año actual
+        if (aguinaldoData.anio === new Date().getFullYear()) {
+            await updateEmpleado(aguinaldoData.empleadoId, { aguinaldoPagado: true });
+        }
+
+        return { success: true, data };
+    };
+
+    // ========== PRESTACIONES: NÓMINAS ==========
+    const getNominasByEmpleado = async (empleadoId) => {
+        if (!client) return [];
+        const { data, error } = await client
+            .from('nominas')
+            .select('*')
+            .eq('empleado_id', empleadoId)
+            .order('periodo_fin', { ascending: false });
+
+        if (error) {
+            console.error('Error fetching nominas:', error);
+            return [];
+        }
+        return data || [];
+    };
+
+    const createNomina = async (nominaData) => {
+        if (!client) return { error: 'Not initialized' };
+
+        const { data, error } = await client
+            .from('nominas')
+            .insert([{
+                empleado_id: nominaData.empleadoId,
+                periodo_inicio: nominaData.periodoInicio,
+                periodo_fin: nominaData.periodoFin,
+                tipo_periodo: nominaData.tipoPeriodo,
+                salario_base: nominaData.salarioBase,
+                ingresos_extras: nominaData.ingresosExtras || 0,
+                deduccion_inss: nominaData.deduccionInss || 0,
+                deduccion_ir: nominaData.deduccionIr || 0,
+                otras_deducciones: nominaData.otrasDeducciones || 0,
+                total_neto: nominaData.totalNeto,
+                estado: nominaData.estado || 'Pagado',
+                fecha_pago: nominaData.fechaPago || new Date(),
+                notas: nominaData.notas
+            }])
+            .select()
+            .single();
+
+        if (error) return { error: handleSupabaseError(error, 'createNomina') };
+        return { success: true, data };
+    };
+
     // ========== PUBLIC API ==========
     return {
         // Inicialización
@@ -958,6 +1241,7 @@ const SupabaseDataService = (() => {
 
         // Auth
         authenticateUser,
+        createUser, // Exportar createUser
         getCurrentUser,
         getCurrentProfile,
         signIn,
@@ -1021,6 +1305,18 @@ const SupabaseDataService = (() => {
         createEmpleado,
         updateEmpleado,
         deleteEmpleado,
+
+        // Prestaciones
+        getVacacionesByEmpleado,
+        createVacacion,
+        updateVacacion,
+        deleteVacacion,
+
+        getAguinaldosByEmpleado,
+        createAguinaldo,
+
+        getNominasByEmpleado,
+        createNomina,
 
         // Helpers
         generateCode

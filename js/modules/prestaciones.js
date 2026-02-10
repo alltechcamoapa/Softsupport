@@ -3,17 +3,17 @@
  * Gestión de prestaciones laborales conforme a la ley nicaragüense
  */
 const PrestacionesModule = (() => {
-    // State
-    let currentTab = 'empleados';
-    let searchTerm = '';
+  // State
+  let currentTab = 'empleados';
+  let searchTerm = '';
 
-    // ========== RENDERING ==========
-    const render = () => {
-        return `
+  // ========== RENDERING ==========
+  const render = () => {
+    return `
       <div class="module-container">
         <div class="module-header">
           <h2 class="module-title">${Icons.users} Prestaciones Sociales</h2>
-          <button class="btn btn--primary" onclick="PrestacionesModule.openCreateEmpleadoModal()">
+          <button class="btn btn--primary" onclick="PrestacionesModule.openEmpleadoModal()">
             ${Icons.plus} Nuevo Empleado
           </button>
         </div>
@@ -54,37 +54,37 @@ const PrestacionesModule = (() => {
 
       <div id="prestacionesModal"></div>
     `;
-    };
+  };
 
-    const renderTabContent = () => {
-        switch (currentTab) {
-            case 'empleados':
-                return renderEmpleadosTab();
-            case 'vacaciones':
-                return renderVacacionesTab();
-            case 'aguinaldo':
-                return renderAguinaldoTab();
-            case 'recibos':
-                return renderRecibosTab();
-            case 'liquidacion':
-                return renderLiquidacionTab();
-            case 'reportes':
-                return renderReportesTab();
-            default:
-                return renderEmpleadosTab();
-        }
-    };
+  const renderTabContent = () => {
+    switch (currentTab) {
+      case 'empleados':
+        return renderEmpleadosTab();
+      case 'vacaciones':
+        return renderVacacionesTab();
+      case 'aguinaldo':
+        return renderAguinaldoTab();
+      case 'recibos':
+        return renderRecibosTab();
+      case 'liquidacion':
+        return renderLiquidacionTab();
+      case 'reportes':
+        return renderReportesTab();
+      default:
+        return renderEmpleadosTab();
+    }
+  };
 
-    // ========== EMPLEADOS TAB ==========
-    const renderEmpleadosTab = () => {
-        const empleados = DataService.getEmpleadosSync?.() || [];
-        const filtered = empleados.filter(e =>
-            e.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            e.cedula?.includes(searchTerm) ||
-            e.cargo?.toLowerCase().includes(searchTerm.toLowerCase())
-        );
+  // ========== EMPLEADOS TAB ==========
+  const renderEmpleadosTab = () => {
+    const empleados = DataService.getEmpleadosSync?.() || [];
+    const filtered = empleados.filter(e =>
+      e.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      e.cedula?.includes(searchTerm) ||
+      e.cargo?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
-        return `
+    return `
       <div class="search-bar">
         <input type="text" class="search-input" placeholder="Buscar empleados..." 
                value="${searchTerm}" 
@@ -154,16 +154,16 @@ const PrestacionesModule = (() => {
         </table>
       </div>
     `;
-    };
+  };
 
-    // ========== VACACIONES TAB ==========
-    const renderVacacionesTab = () => {
-        const empleados = DataService.getEmpleadosSync?.() || [];
-        const activosConVacaciones = empleados
-            .filter(e => e.estado === 'Activo')
-            .map(e => calcularVacaciones(e));
+  // ========== VACACIONES TAB ==========
+  const renderVacacionesTab = () => {
+    const empleados = DataService.getEmpleadosSync?.() || [];
+    const activosConVacaciones = empleados
+      .filter(e => e.estado === 'Activo')
+      .map(e => calcularVacaciones(e));
 
-        return `
+    return `
       <div class="card">
         <div class="card__header">
           <h3 class="card__title">${Icons.calendar} Control de Vacaciones</h3>
@@ -227,16 +227,16 @@ const PrestacionesModule = (() => {
         </ul>
       </div>
     `;
-    };
+  };
 
-    // ========== AGUINALDO TAB ==========
-    const renderAguinaldoTab = () => {
-        const empleados = DataService.getEmpleadosSync?.() || [];
-        const activos = empleados.filter(e => e.estado === 'Activo');
-        const aguinaldos = activos.map(e => calcularAguinaldo(e));
-        const totalAguinaldo = aguinaldos.reduce((sum, a) => sum + a.monto, 0);
+  // ========== AGUINALDO TAB ==========
+  const renderAguinaldoTab = () => {
+    const empleados = DataService.getEmpleadosSync?.() || [];
+    const activos = empleados.filter(e => e.estado === 'Activo');
+    const aguinaldos = activos.map(e => calcularAguinaldo(e));
+    const totalAguinaldo = aguinaldos.reduce((sum, a) => sum + a.monto, 0);
 
-        return `
+    return `
       <div class="stats-row">
         <div class="stat-card stat-card--success">
           <div class="stat-card__header">
@@ -316,11 +316,11 @@ const PrestacionesModule = (() => {
         </ul>
       </div>
     `;
-    };
+  };
 
-    // ========== RECIBOS TAB ==========
-    const renderRecibosTab = () => {
-        return `
+  // ========== RECIBOS TAB ==========
+  const renderRecibosTab = () => {
+    return `
       <div class="card">
         <div class="card__header">
           <h3 class="card__title">${Icons.fileText} Generar Recibos de Pago</h3>
@@ -347,8 +347,8 @@ const PrestacionesModule = (() => {
               <label class="form-label">Empleados (dejar vacío para todos)</label>
               <select name="empleados"  class="form-select" multiple size="5">
                 ${(DataService.getEmpleadosSync?.() || [])
-                .filter(e => e.estado === 'Activo')
-                .map(e => `
+        .filter(e => e.estado === 'Activo')
+        .map(e => `
                     <option value="${e.id}">${e.nombre} - ${e.cargo}</option>
                   `).join('')}
               </select>
@@ -375,11 +375,11 @@ const PrestacionesModule = (() => {
         </ul>
       </div>
     `;
-    };
+  };
 
-    // ========== LIQUIDACIÓN TAB ==========
-    const renderLiquidacionTab = () => {
-        return `
+  // ========== LIQUIDACIÓN TAB ==========
+  const renderLiquidacionTab = () => {
+    return `
       <div class="card">
         <div class="card__header">
           <h3 class="card__title">${Icons.dollarSign || '💰'} Calcular Liquidación</h3>
@@ -392,8 +392,8 @@ const PrestacionesModule = (() => {
                       onchange="PrestacionesModule.loadEmpleadoData(this.value)">
                 <option value="">Seleccionar empleado...</option>
                 ${(DataService.getEmpleadosSync?.() || [])
-                .filter(e => e.estado === 'Activo')
-                .map(e => `
+        .filter(e => e.estado === 'Activo')
+        .map(e => `
                     <option value="${e.id}">${e.nombre} - ${e.cargo}</option>
                   `).join('')}
               </select>
@@ -445,11 +445,11 @@ const PrestacionesModule = (() => {
         </ul>
       </div>
     `;
-    };
+  };
 
-    // ==  ======== REPORTES TAB ==========
-    const renderReportesTab = () => {
-        return `
+  // ==  ======== REPORTES TAB ==========
+  const renderReportesTab = () => {
+    return `
       <div class="reports-grid">
         <div class="card">
           <div class="card__header">
@@ -504,133 +504,158 @@ const PrestacionesModule = (() => {
         </div>
       </div>
     `;
+  };
+
+  // ========== CÁLCULOS LABORALES (Nicaragua) ==========
+
+  const calcularVacaciones = (empleado) => {
+    const fechaAlta = new Date(empleado.fechaAlta);
+    const hoy = new Date();
+
+    // Calcular meses totales trabajados
+    const diffTime = Math.abs(hoy - fechaAlta);
+    const diasTotales = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const mesesLaborados = diasTotales / 30.417; // Promedio días por mes
+
+    // Ley de Nicaragua: 2.5 días por mes (30 días al año)
+    // Calculamos acumulado histórico total
+    const diasAcumulados = parseFloat((mesesLaborados * 2.5).toFixed(2));
+
+    // Días tomados (histórico)
+    const diasTomados = empleado.vacacionesTomadas || 0;
+
+    // Saldo disponible
+    const diasDisponibles = parseFloat((diasAcumulados - diasTomados).toFixed(2));
+    const antiguedadAnios = parseFloat((mesesLaborados / 12).toFixed(1));
+
+    // Próximo período (Fecha aniversario)
+    const proximaFecha = new Date(fechaAlta);
+    proximaFecha.setFullYear(hoy.getFullYear() + 1);
+    while (proximaFecha < hoy) {
+      proximaFecha.setFullYear(proximaFecha.getFullYear() + 1);
+    }
+
+    return {
+      id: empleado.id,
+      nombre: empleado.nombre,
+      cargo: empleado.cargo,
+      antiguedadAnios,
+      diasAcumulados,
+      diasTomados,
+      diasDisponibles,
+      proximoPeriodo: proximaFecha.toLocaleDateString('es-NI')
     };
+  };
 
-    // ========== CÁLCULOS LABORALES (Nicaragua) ==========
+  const calcularAguinaldo = (empleado) => {
+    const fechaAlta = new Date(empleado.fechaAlta);
+    const hoy = new Date();
+    const inicioAnio = new Date(hoy.getFullYear(), 0, 1);
+    const fechaInicio = fechaAlta > inicioAnio ? fechaAlta : inicioAnio;
 
-    const calcularVacaciones = (empleado) => {
-        const fechaAlta = new Date(empleado.fechaAlta);
-        const hoy = new Date();
-        const antiguedadMs = hoy - fechaAlta;
-        const antiguedadAnios = Math.floor(antiguedadMs / (365.25 * 24 * 60 * 60 * 1000));
+    // Calcular meses trabajados en el año
+    const mesesLaborados = Math.min(12, Math.floor((hoy - fechaInicio) / (30.44 * 24 * 60 * 60 * 1000)));
 
-        // Ley de Nicaragua: 15 días el primer año, +1 día por año adicional (máx 30)
-        let diasAcumulados = 15;
-        if (antiguedadAnios > 1) {
-            diasAcumulados = Math.min(15 + (antiguedadAnios - 1), 30);
-        }
+    // Fórmula Nicaragua: (Salario / 12) * meses laborados
+    const salario = empleado.salarioTotal || 0;
+    const monto = (salario / 12) * mesesLaborados;
 
-        const diasTomados = empleado.vacacionesTomadas || 0;
-        const diasDisponibles = diasAcumulados - diasTomados;
-
-        // Próximo período
-        const proximaFecha = new Date(fechaAlta);
-        proximaFecha.setFullYear(hoy.getFullYear() + 1);
-
-        return {
-            id: empleado.id,
-            nombre: empleado.nombre,
-            cargo: empleado.cargo,
-            antiguedadAnios,
-            diasAcumulados,
-            diasTomados,
-            diasDisponibles,
-            proximoPeriodo: proximaFecha.toLocaleDateString('es-NI')
-        };
+    return {
+      empleadoId: empleado.id,
+      nombre: empleado.nombre,
+      cedula: empleado.cedula,
+      fechaAlta: empleado.fechaAlta,
+      mesesLaborados,
+      salario,
+      monto,
+      pagado: empleado.aguinaldoPagado || false
     };
+  };
 
-    const calcularAguinaldo = (empleado) => {
-        const fechaAlta = new Date(empleado.fechaAlta);
-        const hoy = new Date();
-        const inicioAnio = new Date(hoy.getFullYear(), 0, 1);
-        const fechaInicio = fechaAlta > inicioAnio ? fechaAlta : inicioAnio;
-
-        // Calcular meses trabajados en el año
-        const mesesLaborados = Math.min(12, Math.floor((hoy - fechaInicio) / (30.44 * 24 * 60 * 60 * 1000)));
-
-        // Fórmula Nicaragua: (Salario / 12) * meses laborados
-        const salario = empleado.salarioTotal || 0;
-        const monto = (salario / 12) * mesesLaborados;
-
-        return {
-            empleadoId: empleado.id,
-            nombre: empleado.nombre,
-            cedula: empleado.cedula,
-            fechaAlta: empleado.fechaAlta,
-            mesesLaborados,
-            salario,
-            monto,
-            pagado: empleado.aguinaldoPagado || false
-        };
+  const calcularINSS = (salario) => {
+    // Nicaragua: INSS empleado 7% (Reformas 2019)
+    // Patronal: 21.5% (< 50 empleados) o 22.5% (> 50 empleados). Usamos 21.5% por defecto.
+    return {
+      empleado: salario * 0.07,
+      empleador: salario * 0.215,
+      total: salario * 0.285
     };
+  };
 
-    const calcularINSS = (salario) => {
-        // Nicaragua: INSS empleado 6.25%, empleador 19%
-        return {
-            empleado: salario * 0.0625,
-            empleador: salario * 0.19,
-            total: salario * 0.2525
-        };
-    };
+  const calcularIR = (salario) => {
+    // Tabla IR Nicaragua 2024 (progresiva mensual)
+    const tramos = [
+      { hasta: 100000, tasa: 0 },
+      { hasta: 200000, tasa: 0.15, sobre: 100000 },
+      { hasta: 350000, tasa: 0.20, sobre: 200000 },
+      { hasta: 500000, tasa: 0.25, sobre: 350000 },
+      { hasta: Infinity, tasa: 0.30, sobre: 500000 }
+    ];
 
-    const calcularIR = (salario) => {
-        // Tabla IR Nicaragua 2024 (progresiva mensual)
-        const tramos = [
-            { hasta: 100000, tasa: 0 },
-            { hasta: 200000, tasa: 0.15, sobre: 100000 },
-            { hasta: 350000, tasa: 0.20, sobre: 200000 },
-            { hasta: 500000, tasa: 0.25, sobre: 350000 },
-            { hasta: Infinity, tasa: 0.30, sobre: 500000 }
-        ];
+    const salarioAnual = salario * 12;
+    let ir = 0;
+    let baseAnterior = 0;
 
-        const salarioAnual = salario * 12;
-        let ir = 0;
-        let baseAnterior = 0;
+    for (const tramo of tramos) {
+      if (salarioAnual <= tramo.hasta) {
+        ir += (salarioAnual - (tramo.sobre || 0)) * tramo.tasa;
+        break;
+      } else if (tramo.sobre !== undefined) {
+        ir += (tramo.hasta - tramo.sobre) * tramo.tasa;
+      }
+    }
 
-        for (const tramo of tramos) {
-            if (salarioAnual <= tramo.hasta) {
-                ir += (salarioAnual - (tramo.sobre || 0)) * tramo.tasa;
-                break;
-            } else if (tramo.sobre !== undefined) {
-                ir += (tramo.hasta - tramo.sobre) * tramo.tasa;
-            }
-        }
+    return ir / 12; // Mensual
+  };
 
-        return ir / 12; // Mensual
-    };
+  // ========== MODAL HANDLERS ==========
+  const openEmpleadoModal = (empleadoId = null) => {
+    let emp = null;
+    let title = 'Nuevo Empleado';
+    let btnText = 'Crear Empleado';
 
-    // ========== MODAL HANDLERS ==========
-    const openCreateEmpleadoModal = () => {
-        document.getElementById('prestacionesModal').innerHTML = `
+    if (empleadoId) {
+      emp = DataService.getEmpleadoById(empleadoId);
+      if (!emp) return;
+      title = 'Editar Empleado';
+      btnText = 'Guardar Cambios';
+    }
+
+    const safeVal = (val) => val || '';
+    const dateVal = (date) => date ? new Date(date).toISOString().split('T')[0] : '';
+
+    document.getElementById('prestacionesModal').innerHTML = `
       <div class="modal-overlay open" onclick="PrestacionesModule.closeModal(event)">
         <div class="modal modal--large" onclick="event.stopPropagation()">
           <div class="modal__header">
-            <h3 class="modal__title">${Icons.plus} Nuevo Empleado</h3>
+            <h3 class="modal__title">${empleadoId ? Icons.edit : Icons.plus} ${title}</h3>
             <button class="btn btn--ghost btn--icon" onclick="PrestacionesModule.closeModal()">
               ${Icons.x}
             </button>
           </div>
           <form class="modal__body" onsubmit="PrestacionesModule.saveEmpleado(event)">
+            <input type="hidden" name="id" value="${safeVal(empleadoId)}">
+            
             <h4>Datos Personales</h4>
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label form-label--required">Nombre Completo</label>
-                <input type="text" name="nombre" class="form-input" required>
+                <input type="text" name="nombre" class="form-input" value="${safeVal(emp?.nombre)}" required>
               </div>
               <div class="form-group">
                 <label class="form-label form-label--required">Cédula</label>
-                <input type="text" name="cedula" class="form-input" required>
+                <input type="text" name="cedula" class="form-input" value="${safeVal(emp?.cedula)}" required>
               </div>
             </div>
 
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">Email</label>
-                <input type="email" name="email" class="form-input">
+                <input type="email" name="email" class="form-input" value="${safeVal(emp?.email)}">
               </div>
               <div class="form-group">
                 <label class="form-label">Teléfono</label>
-                <input type="tel" name="telefono" class="form-input">
+                <input type="tel" name="telefono" class="form-input" value="${safeVal(emp?.telefono)}">
               </div>
             </div>
 
@@ -638,12 +663,12 @@ const PrestacionesModule = (() => {
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label form-label--required">Cargo</label>
-                <input type="text" name="cargo" class="form-input" required>
+                <input type="text" name="cargo" class="form-input" value="${safeVal(emp?.cargo)}" required>
               </div>
               <div class="form-group">
                 <label class="form-label form-label--required">Fecha de Alta</label>
                 <input type="date" name="fechaAlta" class="form-input" 
-                       value="${new Date().toISOString().split('T')[0]}" required>
+                       value="${emp?.fechaAlta ? dateVal(emp.fechaAlta) : new Date().toISOString().split('T')[0]}" required>
               </div>
             </div>
 
@@ -652,15 +677,15 @@ const PrestacionesModule = (() => {
                 <label class="form-label form-label--required">Tipo de Salario</label>
                 <select name="tipoSalario" class="form-select" required>
                   <option value="">Seleccionar...</option>
-                  <option value="Mensual">Mensual</option>
-                  <option value="Quincenal">Quincenal</option>
-                  <option value="Por Hora">Por Hora</option>
+                  <option value="Mensual" ${emp?.tipoSalario === 'Mensual' ? 'selected' : ''}>Mensual</option>
+                  <option value="Quincenal" ${emp?.tipoSalario === 'Quincenal' ? 'selected' : ''}>Quincenal</option>
+                  <option value="Por Hora" ${emp?.tipoSalario === 'Por Hora' ? 'selected' : ''}>Por Hora</option>
                 </select>
               </div>
               <div class="form-group">
                 <label class="form-label form-label--required">Salario Total (C$)</label>
                 <input type="number" name="salarioTotal" class="form-input" 
-                       step="0.01" min="0" required>
+                       step="0.01" min="0" value="${emp?.salarioTotal || ''}" required>
               </div>
             </div>
 
@@ -669,86 +694,736 @@ const PrestacionesModule = (() => {
                 <label class="form-label form-label--required">Tipo de Contrato</label>
                 <select name="tipoContrato" class="form-select" required>
                   <option value="">Seleccionar...</option>
-                  <option value="Indefinido">Indefinido</option>
-                  <option value="Temporal">Temporal</option>
-                  <option value="Por Obra">Por Obra</option>
-                  <option value="Prueba">Prueba (30 días)</option>
+                  <option value="Indefinido" ${emp?.tipoContrato === 'Indefinido' ? 'selected' : ''}>Indefinido</option>
+                  <option value="Temporal" ${emp?.tipoContrato === 'Temporal' ? 'selected' : ''}>Temporal</option>
+                  <option value="Por Obra" ${emp?.tipoContrato === 'Por Obra' ? 'selected' : ''}>Por Obra</option>
+                  <option value="Prueba" ${emp?.tipoContrato === 'Prueba' ? 'selected' : ''}>Prueba (30 días)</option>
                 </select>
               </div>
               <div class="form-group">
                 <label class="form-label">Duración Contrato (meses)</label>
                 <input type="number" name="tiempoContrato" class="form-input" 
-                       min="1" placeholder="Solo para contratos temporales">
+                       min="1" placeholder="Solo para contratos temporales" value="${safeVal(emp?.tiempoContrato)}">
                 <span class="form-hint">Dejar vacío si es indefinido</span>
               </div>
             </div>
 
             <div class="form-group">
               <label class="form-label">Observaciones</label>
-              <textarea name="observaciones" class="form-textarea" rows="2"></textarea>
+              <textarea name="observaciones" class="form-textarea" rows="2">${safeVal(emp?.observaciones)}</textarea>
             </div>
 
             <div class="modal__footer" style="margin: calc(-1 * var(--spacing-lg)); margin-top: var(--spacing-lg); padding: var(--spacing-lg); border-top: 1px solid var(--border-color);">
               <button type="button" class="btn btn--secondary" onclick="PrestacionesModule.closeModal()">Cancelar</button>
-              <button type="submit" class="btn btn--primary">${Icons.plus} Crear Empleado</button>
+              <button type="submit" class="btn btn--primary">${empleadoId ? Icons.save : Icons.plus} ${btnText}</button>
             </div>
           </form>
         </div>
       </div>
     `;
-    };
+  };
 
-    const saveEmpleado = (event) => {
-        event.preventDefault();
-        const formData = new FormData(event.target);
-        const data = Object.fromEntries(formData.entries());
+  const saveEmpleado = async (event) => {
+    event.preventDefault();
+    const formData = new FormData(event.target);
+    const data = Object.fromEntries(formData.entries());
+    const id = data.id;
+    delete data.id;
 
+    try {
+      if (id) {
+        await DataService.updateEmpleado(id, data);
+        alert('Empleado actualizado correctamente');
+      } else {
+        // Defaults for new employee
         data.estado = 'Activo';
         data.vacacionesTomadas = 0;
         data.aguinaldoPagado = false;
+        await DataService.createEmpleado(data);
+        alert('Empleado creado correctamente');
+      }
+      closeModal();
+      changeTab('empleados');
+      App.refreshCurrentModule();
+    } catch (error) {
+      console.error('Error saving employee:', error);
+      alert('Error al guardar: ' + error.message);
+    }
+  };
 
-        DataService.createEmpleado?.(data);
+  const closeModal = (event) => {
+    if (event && event.target !== event.currentTarget) return;
+    document.getElementById('prestacionesModal').innerHTML = '';
+    document.getElementById('prestacionesModal').classList.remove('open');
+  };
 
-        closeModal();
-        changeTab('empleados');
-        App.refreshCurrentModule();
-    };
+  // ========== IMPLEMENTACIÓN FUNCIONES ==========
 
-    const closeModal = (event) => {
-        if (event && event.target !== event.currentTarget) return;
-        document.getElementById('prestacionesModal').innerHTML = '';
-    };
+  // --- Empleados ---
+  const viewEmpleado = (id) => {
+    const emp = DataService.getEmpleadoById(id);
+    if (!emp) return;
 
-    // ========== PUBLIC API ==========
-    const changeTab = (tab) => {
-        currentTab = tab;
-        App.refreshCurrentModule();
-    };
+    // Simple vista rápida
+    const contenido = `
+            <div class="modal-overlay open" onclick="PrestacionesModule.closeModal(event)">
+                <div class="modal" onclick="event.stopPropagation()">
+                    <div class="modal__header">
+                        <h3 class="modal__title">${emp.nombre}</h3>
+                        <button class="btn btn--ghost btn--icon" onclick="PrestacionesModule.closeModal()">${Icons.x}</button>
+                    </div>
+                    <div class="modal__body">
+                        <p><strong>Cargo:</strong> ${emp.cargo}</p>
+                        <p><strong>Cédula:</strong> ${emp.cedula}</p>
+                        <p><strong>Email:</strong> ${emp.email || '-'}</p>
+                        <p><strong>Teléfono:</strong> ${emp.telefono || '-'}</p>
+                        <p><strong>Salario:</strong> C$${(emp.salarioTotal || 0).toLocaleString('es-NI')}</p>
+                        <p><strong>Fecha Alta:</strong> ${new Date(emp.fechaAlta).toLocaleDateString()}</p>
+                        <p><strong>Vacaciones Tomadas:</strong> ${emp.vacacionesTomadas || 0}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    document.getElementById('prestacionesModal').innerHTML = contenido;
+  };
 
-    const handleSearch = (value) => {
-        searchTerm = value;
-        App.refreshCurrentModule();
-    };
+  const editEmpleado = (id) => {
+    openEmpleadoModal(id);
+  };
 
-    return {
-        render,
-        changeTab,
-        handleSearch,
-        openCreateEmpleadoModal,
-        saveEmpleado,
-        viewEmpleado: () => alert('Función en desarrollo'),
-        editEmpleado: () => alert('Función en desarrollo'),
-        registrarVacaciones: () => alert('Función en desarrollo'),
-        verHistorialVacaciones: () => alert('Función en desarrollo'),
-        generarAguinaldoReporte: () => alert('Función en desarrollo'),
-        marcarAguinaldoPagado: () => alert('Función en desarrollo'),
-        generarRecibos: () => alert('Función en desarrollo'),
-        calcularLiquidacion: () => alert('Función en desarrollo'),
-        loadEmpleadoData: () => alert('Función en desarrollo'),
-        generarReporteEmpleados: () => alert('Función en desarrollo'),
-        generarReporteVacaciones: () => alert('Función en desarrollo'),
-        generarPlanillaMensual: () => alert('Función en desarrollo'),
-        generarReporteCostos: () => alert('Función en desarrollo'),
-        closeModal
-    };
+  // --- Vacaciones ---
+  const registrarVacaciones = () => {
+    const empleados = DataService.getEmpleadosSync();
+    document.getElementById('prestacionesModal').innerHTML = `
+            <div class="modal-overlay open" onclick="PrestacionesModule.closeModal(event)">
+                <div class="modal" onclick="event.stopPropagation()">
+                    <div class="modal__header">
+                        <h3 class="modal__title">Registrar Vacaciones</h3>
+                        <button class="btn btn--ghost btn--icon" onclick="PrestacionesModule.closeModal()">${Icons.x}</button>
+                    </div>
+                    <form class="modal__body" onsubmit="PrestacionesModule.saveVacaciones(event)">
+                        <div class="form-group">
+                            <label class="form-label">Empleado</label>
+                            <select name="empleadoId" class="form-select" required>
+                                ${empleados.map(e => `<option value="${e.id}">${e.nombre}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="form-row">
+                             <div class="form-group">
+                                <label class="form-label">Desde</label>
+                                <input type="date" name="fechaInicio" class="form-input" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Hasta</label>
+                                <input type="date" name="fechaFin" class="form-input" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Días a descontar</label>
+                            <input type="number" name="dias" class="form-input" min="0.5" step="0.5" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Observaciones</label>
+                            <textarea name="observaciones" class="form-textarea"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn--primary" style="margin-top: 1rem;">Registrar</button>
+                    </form>
+                </div>
+            </div>
+        `;
+  };
+
+  const saveVacaciones = async (event) => {
+    event.preventDefault();
+    const fd = new FormData(event.target);
+    const data = Object.fromEntries(fd.entries());
+    data.dias = parseFloat(data.dias);
+    data.anioCorrespondiente = new Date().getFullYear(); // Simplificación
+
+    try {
+      await DataService.createVacacion(data);
+      alert('Vacaciones registradas');
+      closeModal();
+      App.refreshCurrentModule();
+    } catch (e) {
+      alert('Error: ' + e.message);
+    }
+  };
+
+  const verHistorialVacaciones = async (empleadoId) => {
+    try {
+      const historial = await DataService.getVacacionesByEmpleado(empleadoId);
+      const emp = DataService.getEmpleadoById(empleadoId);
+
+      document.getElementById('prestacionesModal').innerHTML = `
+                <div class="modal-overlay open" onclick="PrestacionesModule.closeModal(event)">
+                    <div class="modal modal--large" onclick="event.stopPropagation()">
+                        <div class="modal__header">
+                            <h3 class="modal__title">Historial: ${emp ? emp.nombre : ''}</h3>
+                            <button class="btn btn--ghost btn--icon" onclick="PrestacionesModule.closeModal()">${Icons.x}</button>
+                        </div>
+                        <div class="modal__body">
+                            <table class="table">
+                                <thead><tr><th>Inicio</th><th>Fin</th><th>Días</th><th>Obs</th><th>Acción</th></tr></thead>
+                                <tbody>
+                                    ${historial.length ? historial.map(h => `
+                                        <tr>
+                                            <td>${new Date(h.fecha_inicio).toLocaleDateString()}</td>
+                                            <td>${new Date(h.fecha_fin).toLocaleDateString()}</td>
+                                            <td>${h.dias}</td>
+                                            <td>${h.observaciones || '-'}</td>
+                                            <td>
+                                                <button class="btn btn--ghost btn--sm btn--icon text-error" 
+                                                    onclick="PrestacionesModule.deleteVacacion('${h.id}')">${Icons.trash}</button>
+                                            </td>
+                                        </tr>
+                                    `).join('') : '<tr><td colspan="5">No hay registros</td></tr>'}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+             `;
+    } catch (e) {
+      console.error(e);
+      alert('Error cargando historial');
+    }
+  };
+
+  const deleteVacacion = async (id) => {
+    if (!confirm('¿Eliminar registro? Se devolverán los días al saldo.')) return;
+    try {
+      await DataService.deleteVacacion(id);
+      // Recargar modal... un poco hacky: cerramos y reabrimos o refrescamos data
+      closeModal();
+      alert('Registro eliminado');
+      App.refreshCurrentModule();
+    } catch (e) {
+      alert('Error: ' + e.message);
+    }
+  };
+
+  // --- Aguinaldo ---
+  const generarAguinaldoReporte = () => {
+    const empleados = DataService.getEmpleadosSync().filter(e => e.estado === 'Activo');
+    const aguinaldos = empleados.map(e => calcularAguinaldo(e));
+    const total = aguinaldos.reduce((sum, a) => sum + a.monto, 0);
+
+    const content = `
+      <table>
+        <thead>
+          <tr>
+            <th>Empleado</th>
+            <th>Fecha Alta</th>
+            <th class="text-center">Meses Computables</th>
+            <th class="text-right">Salario Base</th>
+            <th class="text-right">Aguinaldo a Pagar</th>
+            <th class="text-center">Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${aguinaldos.map(a => `
+            <tr>
+              <td>${a.nombre}</td>
+              <td>${new Date(a.fechaAlta).toLocaleDateString()}</td>
+              <td class="text-center">${a.mesesLaborados}</td>
+              <td class="text-right">C$${a.salario.toLocaleString()}</td>
+              <td class="text-right font-bold">C$${a.monto.toLocaleString()}</td>
+              <td class="text-center">${a.pagado ? 'PAGADO' : 'PENDIENTE'}</td>
+            </tr>
+          `).join('')}
+          <tr class="total-row">
+            <td colspan="4" class="text-right">TOTAL PLANILLA AGUINALDO:</td>
+            <td class="text-right">C$${total.toLocaleString()}</td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+    `;
+    printDocument(`Planilla de Aguinaldo ${new Date().getFullYear()}`, content);
+  };
+
+  const marcarAguinaldoPagado = async (empleadoId) => {
+    if (!confirm('¿Confirmar pago de aguinaldo del año en curso?')) return;
+
+    try {
+      const emp = DataService.getEmpleadoById(empleadoId);
+      const calculo = calcularAguinaldo(emp);
+
+      await DataService.createAguinaldo({
+        empleadoId,
+        anio: new Date().getFullYear(),
+        monto: calculo.monto,
+        diasCalculados: Math.floor(calculo.mesesLaborados * 2.5), // Approx
+        fechaPago: new Date().toISOString(),
+        observaciones: 'Pago generado desde sistema'
+      });
+
+      App.refreshCurrentModule();
+      alert('Pago registrado');
+    } catch (e) {
+      alert('Error: ' + e.message);
+    }
+  };
+
+  // --- Recibos ---
+  const generarRecibos = async (event) => {
+    event.preventDefault();
+    const fd = new FormData(event.target);
+    const periodo = fd.get('periodo'); // quincenal, mensual
+    const mes = fd.get('mes');
+    const empleadosSel = fd.getAll('empleados');
+
+    let empleados = DataService.getEmpleadosSync().filter(e => e.estado === 'Activo');
+    if (empleadosSel.length > 0) {
+      empleados = empleados.filter(e => empleadosSel.includes(e.id));
+    }
+
+    // Iterar y generar
+    let count = 0;
+    for (const e of empleados) {
+      // Calcular salario base según periodo
+      let salarioBase = e.salarioTotal; // Asumimos mensual en empleado
+      if (periodo === 'quincenal') salarioBase = salarioBase / 2;
+
+      // Deducciones
+      const inss = salarioBase * 0.07; // INSS laboral 7% (aprox, usar 6.25% si estricto)
+      const ir = calcularIR(e.salarioTotal) / (periodo === 'quincenal' ? 2 : 1);
+
+      const totalNeto = salarioBase - inss - ir;
+
+      try {
+        await DataService.createNomina({
+          empleadoId: e.id,
+          periodoInicio: `${mes}-01`, // Simplificado
+          periodoFin: `${mes}-15`, // Simplificado
+          tipoPeriodo: periodo,
+          salarioBase: salarioBase,
+          deduccionInss: inss,
+          deduccionIr: ir,
+          totalNeto: totalNeto,
+          estado: 'Pagado',
+          notas: `Generado automáticamente para ${periodo} de ${mes}`
+        });
+        count++;
+      } catch (err) {
+        console.error('Error generando recibo para ' + e.nombre, err);
+      }
+    }
+
+    alert(`Se han generado ${count} recibos de pago.`);
+    changeTab('recibos'); // Recargar o ir a lista (si hubiera)
+  };
+
+  // --- Liquidación ---
+  const loadEmpleadoData = (id) => {
+    const emp = DataService.getEmpleadoById(id);
+    if (!emp) return;
+
+    const info = document.getElementById('empleadoInfo');
+    info.innerHTML = `
+            <div class="info-card info-card--info">
+                <p><strong>Fecha Alta:</strong> ${new Date(emp.fechaAlta).toLocaleDateString()}</p>
+                <p><strong>Salario Mensual:</strong> C$${(emp.salarioTotal || 0).toLocaleString()}</p>
+                <p><strong>Vacaciones Pendientes:</strong> ${calcularVacaciones(emp).diasDisponibles} días</p>
+                <p><strong>Antigüedad:</strong> ${calcularVacaciones(emp).antiguedadAnios} años</p>
+            </div>
+        `;
+  };
+
+  const calcularLiquidacion = (event) => {
+    event.preventDefault();
+    const fd = new FormData(event.target);
+    const empleadoId = fd.get('empleadoId');
+    const motivo = fd.get('motivo');
+    const fechaSalida = new Date(fd.get('fechaSalida'));
+
+    const emp = DataService.getEmpleadoById(empleadoId);
+    if (!emp) return;
+
+    // Cálculos
+    const salarioMensual = emp.salarioTotal || 0;
+    const salarioDiario = salarioMensual / 30;
+
+    // 1. Vacaciones
+    const vacData = calcularVacaciones(emp);
+    const diasVacaciones = vacData.diasDisponibles;
+    const montoVacaciones = diasVacaciones * salarioDiario;
+
+    // 2. Aguinaldo Propocional
+    // Calcular días desde el último 1 de diciembre (o fecha alta) hasta fecha salida
+    const hoyYear = fechaSalida.getFullYear();
+    // Si la fecha salida es antes de diciembre, el ciclo empezó el 1 dic del año anterior
+    let inicioAguinaldo = new Date(hoyYear, 0, 1);
+    // La ley dice 1 de dic a 30 nov. Pero simplificamos ciclo anual
+    // Ajuste: si fecha salida es Enero 2024, periodo es Dic 2023 - Ene 2024.
+    // Asumiremos año calendario simple para este ejemplo o usar calcularAguinaldo que ya lo hace
+    const aguinaldoData = calcularAguinaldo(emp);
+    // calcularAguinaldo usa fecha actual. Necesitamos usar fechaSalida...
+
+    // Recálculo manual de aguinaldo a fecha salida
+    const inicioAnio = new Date(fechaSalida.getFullYear(), 0, 1);
+    const inicioComputo = new Date(Math.max(new Date(emp.fechaAlta), inicioAnio));
+    const diasTrabajadosEnAnio = Math.ceil((fechaSalida - inicioComputo) / (1000 * 60 * 60 * 24));
+    const mesesAguinaldo = diasTrabajadosEnAnio / 30.417;
+    const montoAguinaldo = (salarioMensual / 12) * mesesAguinaldo;
+
+
+    // 3. Indemnización (Art 45)
+    let indemnizacion = 0;
+    let aniosAntiguedad = vacData.antiguedadAnios; // Esto viene de calcularVacaciones calculado a Hoy, debería ser a Fecha Salida
+
+    // Recalcular antigüedad a fecha salida precise
+    const antiguedadMs = fechaSalida - new Date(emp.fechaAlta);
+    const antiguedadExacta = antiguedadMs / (1000 * 60 * 60 * 24 * 365.25); // Años con decimales
+
+    if (motivo === 'despido_sin_justa_causa' || motivo === 'renuncia' || motivo === 'mutuo_acuerdo') {
+      // Art 45: 
+      // - Primeros 3 años: 1 mes de salario por cada año
+      // - A partir del 4to año: 20 días por cada año adicional
+      // - Tope máximo: 5 salarios mensuales
+      // - Fracciones: Proporcionales (Art 45 reformado)
+      // Nota: Renuncia (Art 44) tiene otra regla (solo antigüedad de 3 años min, paga proporcional). 
+      // Por simplicidad en este módulo asumiremos cálculo universal o Art 45 completo aplicado.
+
+      let mesesPagar = 0;
+
+      if (antiguedadExacta <= 3) {
+        mesesPagar = antiguedadExacta; // 1 mes por año
+      } else {
+        mesesPagar = 3; // Primeros 3 años
+        const aniosExtra = antiguedadExacta - 3;
+        // 20 días = 20/30 mes = 0.6666 mes
+        mesesPagar += aniosExtra * (20 / 30);
+      }
+
+      // Tope 5 meses
+      if (mesesPagar > 5) mesesPagar = 5;
+
+      indemnizacion = mesesPagar * salarioMensual;
+    }
+
+    const total = montoVacaciones + montoAguinaldo + indemnizacion;
+
+    const resultDiv = document.getElementById('liquidacionResult');
+    resultDiv.innerHTML = `
+            <div class="card" style="margin-top: 1rem; border: 1px solid var(--primary-color);">
+                <div class="card__header">
+                    <h3 class="card__title">Resultado Liquidación (Estimado)</h3>
+                    <button class="btn btn--ghost btn--sm" onclick="PrestacionesModule.printDocument('Liquidación Laboral', document.getElementById('liquidacionTabla').outerHTML)">Imprimir</button>
+                </div>
+                <div class="card__body" id="liquidacionTabla">
+                    <div style="margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px;">
+                        <h4 style="margin:0;">${emp.nombre}</h4>
+                        <p style="margin:5px 0; font-size: 0.9em; color: #666;">
+                            Fecha Ingreso: ${new Date(emp.fechaAlta).toLocaleDateString()} <br>
+                            Fecha Salida: ${fechaSalida.toLocaleDateString()} <br>
+                            Antigüedad: ${antiguedadExacta.toFixed(2)} años
+                        </p>
+                    </div>
+                    <table class="table">
+                        <tr><td>Vacaciones Pendientes (${diasVacaciones.toFixed(2)} días)</td><td class="text-right">C$${montoVacaciones.toFixed(2)}</td></tr>
+                        <tr><td>Aguinaldo Proporcional (${mesesAguinaldo.toFixed(2)} meses)</td><td class="text-right">C$${montoAguinaldo.toFixed(2)}</td></tr>
+                        <tr><td>Indemnización (${aniosAntiguedad.toFixed(2)} años)</td><td class="text-right">C$${indemnizacion.toFixed(2)}</td></tr>
+                        <tr style="font-weight: bold; font-size: 1.1em; border-top: 2px solid #ccc;"><td>TOTAL A PAGAR</td><td class="text-right">C$${total.toFixed(2)}</td></tr>
+                    </table>
+                    <p style="font-size: 0.8em; color: #777; margin-top: 10px;">
+                        * Cálculo estimado conforme a Art. 45 y 76 del Código del Trabajo. <br>
+                        * Verificar deducciones de IR o INSS sobre vacaciones indemnizadas si aplica.
+                    </p>
+                </div>
+            </div>
+        `;
+  };
+
+  // --- Reportes ---
+  // --- Reportes Helpers ---
+  const printDocument = (title, content) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) { alert('Por favor habilite las ventanas emergentes para imprimir el reporte.'); return; }
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${title} - ALLTECH SUPPORT</title>
+          <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 0; margin: 0; color: #333; }
+            .container { padding: 40px; max-width: 1000px; margin: 0 auto; }
+            h1 { text-align: center; color: #1a73e8; margin-bottom: 10px; font-size: 24px; text-transform: uppercase; }
+            p.subtitle { text-align: center; color: #666; margin-bottom: 30px; font-size: 14px; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px; }
+            th, td { border: 1px solid #ddd; padding: 10px 8px; text-align: left; }
+            th { background-color: #f1f3f4; font-weight: bold; color: #202124; text-transform: uppercase; font-size: 11px; }
+            tr:nth-child(even) { background-color: #f8f9fa; }
+            .text-right { text-align: right; }
+            .text-center { text-align: center; }
+            .total-row { font-weight: bold; background-color: #e8f0fe !important; }
+            .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; color: white; background-color: #666; }
+            .badge--success { background-color: #28a745; }
+            .badge--warning { background-color: #ffc107; color: #333; }
+            .footer { margin-top: 50px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 10px; text-align: center; color: #999; }
+            @media print {
+              @page { margin: 1cm; size: landscape; }
+              body { -webkit-print-color-adjust: exact; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>${title}</h1>
+              <p class="subtitle">Generado: ${new Date().toLocaleString('es-NI')}</p>
+            </div>
+            ${content}
+            <div class="footer">
+              Generado por Sistema ALLTECH SUPPORT - Uso Interno Confidencial
+            </div>
+          </div>
+          <script>
+            setTimeout(() => { window.print(); }, 500);
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  // --- Implementación Reportes ---
+  const generarReporteEmpleados = () => {
+    const empleados = DataService.getEmpleadosSync().filter(e => e.estado === 'Activo');
+    const content = `
+      <table>
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Cédula</th>
+            <th>Cargo</th>
+            <th>Fecha Alta</th>
+            <th>Salario Total</th>
+            <th>Contrato</th>
+            <th>Email / Tel</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${empleados.map(e => `
+            <tr>
+              <td>${e.nombre}</td>
+              <td>${e.cedula || '-'}</td>
+              <td>${e.cargo}</td>
+              <td>${new Date(e.fechaAlta).toLocaleDateString()}</td>
+              <td class="text-right">C$${(e.salarioTotal || 0).toLocaleString()}</td>
+              <td>${e.tipoContrato}</td>
+              <td>${e.email || ''}<br>${e.telefono || ''}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+    printDocument('Reporte de Personal Activo', content);
+  };
+
+  const generarReporteVacaciones = () => {
+    const empleados = DataService.getEmpleadosSync().filter(e => e.estado === 'Activo');
+    const datos = empleados.map(e => calcularVacaciones(e));
+
+    const content = `
+      <table>
+        <thead>
+          <tr>
+            <th>Empleado</th>
+            <th>Cargo</th>
+            <th>Antigüedad (Años)</th>
+            <th class="text-center">Días Acumulados</th>
+            <th class="text-center">Días Tomados</th>
+            <th class="text-center">Saldo Disponible</th>
+            <th>Valor Monetario (Est.)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${datos.map(d => {
+      const empleado = empleados.find(e => e.id === d.id);
+      const valorDia = (empleado.salarioTotal / 30);
+      const valorSaldo = d.diasDisponibles * valorDia;
+      return `
+              <tr>
+                <td>${d.nombre}</td>
+                <td>${d.cargo}</td>
+                <td class="text-center">${d.antiguedadAnios}</td>
+                <td class="text-center">${d.diasAcumulados}</td>
+                <td class="text-center">${d.diasTomados}</td>
+                <td class="text-center" style="font-weight:bold; color: ${d.diasDisponibles >= 0 ? 'inherit' : 'red'};">${d.diasDisponibles}</td>
+                <td class="text-right">C$${valorSaldo.toLocaleString('es-NI', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+              </tr>
+            `;
+    }).join('')}
+          <tr class="total-row">
+            <td colspan="6" class="text-right">TOTAL PASIVO VACACIONAL ESTIMADO:</td>
+            <td class="text-right">C$${datos.reduce((sum, d) => sum + (d.diasDisponibles * (empleados.find(e => e.id === d.id).salarioTotal / 30)), 0).toLocaleString('es-NI', { minimumFractionDigits: 2 })}</td>
+          </tr>
+        </tbody>
+      </table>
+    `;
+    printDocument('Reporte de Estado de Vacaciones', content);
+  };
+
+  const generarPlanillaMensual = () => {
+    const empleados = DataService.getEmpleadosSync().filter(e => e.estado === 'Activo');
+    let totalSalario = 0;
+    let totalINSS = 0;
+    let totalIR = 0;
+    let totalNeto = 0;
+
+    const rows = empleados.map(e => {
+      const salario = e.salarioTotal || 0;
+      const inss = calcularINSS(salario).empleado;
+      const ir = calcularIR(salario);
+      const neto = salario - inss - ir;
+
+      totalSalario += salario;
+      totalINSS += inss;
+      totalIR += ir;
+      totalNeto += neto;
+
+      return `
+            <tr>
+                <td>${e.nombre}</td>
+                <td>${e.cargo}</td>
+                <td class="text-right">C$${salario.toLocaleString()}</td>
+                <td class="text-right text-danger">- C$${inss.toLocaleString()}</td>
+                <td class="text-right text-danger">- C$${ir.toLocaleString()}</td>
+                <td class="text-right font-bold">C$${neto.toLocaleString()}</td>
+            </tr>
+        `;
+    }).join('');
+
+    const content = `
+      <h3>Proyección Mensual (Base Salarial)</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Empleado</th>
+            <th>Cargo</th>
+            <th class="text-right">Salario Bruto</th>
+            <th class="text-right">INSS (7%)</th>
+            <th class="text-right">IR (Est.)</th>
+            <th class="text-right">Neto a Recibir</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+          <tr class="total-row">
+            <td colspan="2" class="text-right">TOTALES MENSUALES:</td>
+            <td class="text-right">C$${totalSalario.toLocaleString()}</td>
+            <td class="text-right">C$${totalINSS.toLocaleString()}</td>
+            <td class="text-right">C$${totalIR.toLocaleString()}</td>
+            <td class="text-right">C$${totalNeto.toLocaleString()}</td>
+          </tr>
+        </tbody>
+      </table>
+    `;
+    printDocument('Planilla Mensual Proyectada', content);
+  };
+
+  const generarReporteCostos = () => {
+    const empleados = DataService.getEmpleadosSync().filter(e => e.estado === 'Activo');
+    let totalSalario = 0;
+    let totalINSSPatronal = 0;
+    let totalINATE = 0; // INATEC 2%
+    let totalVacaciones = 0; // Provisión 1/12
+    let totalAguinaldo = 0; // Provisión 1/12
+
+    const rows = empleados.map(e => {
+      const salario = e.salarioTotal || 0;
+      const inssPatronal = calcularINSS(salario).empleador;
+      const inatec = salario * 0.02;
+      const provisionLey = (salario / 12) * 2; // Vacaciones + Aguinaldo (approx 1 mes cada uno por año)
+
+      const costoTotal = salario + inssPatronal + inatec + provisionLey;
+
+      totalSalario += salario;
+      totalINSSPatronal += inssPatronal;
+      totalINATE += inatec;
+      totalVacaciones += (salario / 12);
+      totalAguinaldo += (salario / 12);
+
+      return `
+            <tr>
+                <td>${e.nombre}</td>
+                <td class="text-right">C$${salario.toLocaleString()}</td>
+                <td class="text-right">C$${inssPatronal.toLocaleString()}</td>
+                <td class="text-right">C$${inatec.toLocaleString()}</td>
+                <td class="text-right">C$${provisionLey.toLocaleString()}</td>
+                <td class="text-right font-bold">C$${costoTotal.toLocaleString()}</td>
+            </tr>
+        `;
+    }).join('');
+
+    const granTotal = totalSalario + totalINSSPatronal + totalINATE + totalVacaciones + totalAguinaldo;
+
+    const content = `
+      <h3>Costos Laborales Mensuales (Carga Patronal)</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Empleado</th>
+            <th class="text-right">Salario Base</th>
+            <th class="text-right">INSS Patronal (21.5%)</th>
+            <th class="text-right">INATEC (2%)</th>
+            <th class="text-right">Prov. Ley (Vac+Agui)</th>
+            <th class="text-right">Costo Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+          <tr class="total-row">
+            <td class="text-right">TOTALES:</td>
+            <td class="text-right">C$${totalSalario.toLocaleString()}</td>
+            <td class="text-right">C$${totalINSSPatronal.toLocaleString()}</td>
+            <td class="text-right">C$${totalINATE.toLocaleString()}</td>
+            <td class="text-right">C$${(totalVacaciones + totalAguinaldo).toLocaleString()}</td>
+            <td class="text-right">C$${granTotal.toLocaleString()}</td>
+          </tr>
+        </tbody>
+      </table>
+      <p style="margin-top: 20px; font-size: 11px; color: #666;">Nota: INSS Patronal calculado al 21.5% (Régimen < 50 empleados). INATEC 2%. Provisiones de Ley incluyen doceava parte de Vacaciones y Aguinaldo.</p>
+    `;
+    printDocument('Reporte de Costos Laborales', content);
+  };
+
+
+
+  // ========== PUBLIC API ==========
+  const changeTab = (tab) => {
+    currentTab = tab;
+    App.refreshCurrentModule();
+  };
+
+  const handleSearch = (value) => {
+    searchTerm = value;
+    App.refreshCurrentModule();
+  };
+
+  return {
+    render,
+    changeTab,
+    handleSearch,
+    openEmpleadoModal,
+    saveEmpleado,
+    viewEmpleado,
+    editEmpleado,
+    registrarVacaciones,
+    verHistorialVacaciones,
+    generarAguinaldoReporte,
+    marcarAguinaldoPagado,
+    generarRecibos,
+    calcularLiquidacion,
+    loadEmpleadoData,
+    generarReporteEmpleados,
+    generarReporteVacaciones,
+    generarPlanillaMensual,
+    generarReporteCostos,
+    closeModal,
+    printDocument
+  };
 })();

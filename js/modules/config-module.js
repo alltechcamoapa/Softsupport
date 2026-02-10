@@ -795,6 +795,7 @@ const ConfigModule = (() => {
       { id: 'productos', name: 'Productos', icon: Icons.package },
       { id: 'equipos', name: 'Equipos', icon: Icons.monitor },
       { id: 'software', name: 'Software', icon: Icons.code },
+      { id: 'prestaciones', name: 'Prestaciones', icon: Icons.dollarSign },
       { id: 'calendario', name: 'Calendario', icon: Icons.calendar },
       { id: 'reportes', name: 'Reportes', icon: Icons.barChart },
       { id: 'configuracion', name: 'Configuración', icon: Icons.settings }
@@ -815,11 +816,9 @@ const ConfigModule = (() => {
             <div class="form-group">
               <label class="form-label">Nombre de Usuario</label>
               <input type="text" name="username" class="form-input" placeholder="Ej: jperez" required>
+              <span class="form-hint">Se usará para iniciar sesión</span>
             </div>
-            <div class="form-group">
-              <label class="form-label">Correo Electrónico</label>
-              <input type="email" name="email" class="form-input" placeholder="usuario@empresa.com" required>
-            </div>
+            <!-- Email se genera automáticamente -->
             <div class="form-group">
               <label class="form-label">Contraseña</label>
               <input type="password" name="password" class="form-input" placeholder="Mínimo 6 caracteres" minlength="6" required>
@@ -910,10 +909,14 @@ const ConfigModule = (() => {
     // Get selected modules
     const selectedModules = Array.from(formData.getAll('modules'));
 
+    const username = formData.get('username').toLowerCase().replace(/\s+/g, '');
+    // Generar email automático para Supabase Auth (no visible al usuario)
+    const email = formData.get('email') || `${username}@alltech.local`;
+
     const userData = {
       name: formData.get('name'),
-      username: formData.get('username'),
-      email: formData.get('email'),
+      username: username,
+      email: email,
       password: formData.get('password'),
       role: formData.get('role'),
       allowedModules: selectedModules,
@@ -925,8 +928,8 @@ const ConfigModule = (() => {
     };
 
     try {
-      // Crear usuario en Supabase Auth + Profile
-      const result = await createUser(userData);
+      // Crear usuario en Supabase Auth + Profile via DataService
+      const result = await DataService.createUser(userData);
 
       if (result.error) {
         showToast(`Error al crear usuario: ${result.error}`, 'error');
@@ -960,6 +963,7 @@ const ConfigModule = (() => {
       { id: 'productos', name: 'Productos', icon: Icons.package },
       { id: 'equipos', name: 'Equipos', icon: Icons.monitor },
       { id: 'software', name: 'Software', icon: Icons.code },
+      { id: 'prestaciones', name: 'Prestaciones', icon: Icons.dollarSign },
       { id: 'calendario', name: 'Calendario', icon: Icons.calendar },
       { id: 'reportes', name: 'Reportes', icon: Icons.barChart },
       { id: 'configuracion', name: 'Configuración', icon: Icons.settings }
@@ -1113,7 +1117,6 @@ const ConfigModule = (() => {
     toggleAlertasContratos, toggleRecordatoriosVisitas, setDiasAnticipacion,
     openEditProfile, saveProfile, exportData, clearCache, closeModal,
     togglePermission, toggleSpecificPermission, toggleFullAccess,
-    openCreateUser, saveNewUser, editUser, saveEditUser, deleteUser,
     openCreateUser, saveNewUser, editUser, saveEditUser, deleteUser,
     exportarBitacora, limpiarBitacora, showToast
   };

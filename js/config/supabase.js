@@ -279,6 +279,15 @@ const handleSupabaseError = (error, context = '') => {
 // ========== EXPORTAR ==========
 // Make functions globally available for browser
 if (typeof window !== 'undefined') {
+    window.initSupabase = initSupabase;
+    window.getSupabaseClient = getSupabaseClient;
+    window.isAuthenticated = isAuthenticated;
+    window.getCurrentUser = getCurrentUser;
+    window.getCurrentProfile = getCurrentProfile;
+    window.signIn = signIn;
+    window.signOut = signOut;
+    window.createUser = createUser;
+    window.onAuthStateChange = onAuthStateChange;
     window.handleSupabaseError = handleSupabaseError;
 }
 

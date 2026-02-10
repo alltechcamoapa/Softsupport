@@ -1,0 +1,545 @@
+/**
+ * ============================================
+ * ALLTECH SUPPORT - Mobile Enhancements
+ * Advanced mobile optimizations for better UX
+ * ============================================
+ */
+
+/* ========== BOTTOM NAV - SHOW ON ALL MOBILE (not just standalone) ========== */
+@media (max-width: 767px) {
+
+    /* Show bottom nav on all mobile browsers */
+    .pwa-bottom-nav {
+        display: flex !important;
+    }
+
+    /* Add bottom padding for content to avoid bottom nav overlap */
+    .main {
+        padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+    }
+
+    /* Sidebar overlay when open */
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        z-index: 1050;
+        transform: translateX(-100%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .sidebar.open {
+        transform: translateX(0);
+    }
+}
+
+/* ========== TABLE RESPONSIVE WRAPPER ========== */
+@media (max-width: 767px) {
+
+    /* Make tables horizontally scrollable in a clean way */
+    .data-table {
+        display: block;
+        width: 100%;
+    }
+
+    .data-table thead,
+    .data-table tbody,
+    .data-table tr,
+    .data-table th,
+    .data-table td {
+        display: block;
+    }
+
+    /* Card-style rows for mobile */
+    .data-table thead {
+        display: none;
+    }
+
+    .data-table tbody tr {
+        margin-bottom: var(--spacing-sm);
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius-md);
+        padding: var(--spacing-sm);
+        background: var(--bg-secondary);
+    }
+
+    .data-table tbody td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: var(--spacing-xs) var(--spacing-sm);
+        border-bottom: 1px solid var(--border-light, var(--border-color));
+        font-size: var(--font-size-sm);
+    }
+
+    .data-table tbody td:last-child {
+        border-bottom: none;
+    }
+
+    /* Show data-label attribute as pseudo-element */
+    .data-table tbody td::before {
+        content: attr(data-label);
+        font-weight: var(--font-weight-semibold);
+        color: var(--text-muted);
+        font-size: var(--font-size-xs);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        flex-shrink: 0;
+        margin-right: var(--spacing-sm);
+    }
+
+    /* Alternative: horizontal scroll for complex tables */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        border-radius: var(--border-radius-md);
+        border: 1px solid var(--border-color);
+    }
+
+    .table-responsive .data-table {
+        display: table;
+        min-width: 600px;
+    }
+
+    .table-responsive .data-table thead {
+        display: table-header-group;
+    }
+
+    .table-responsive .data-table tbody {
+        display: table-row-group;
+    }
+
+    .table-responsive .data-table tr {
+        display: table-row;
+        margin-bottom: 0;
+        border: none;
+        border-radius: 0;
+        padding: 0;
+    }
+
+    .table-responsive .data-table th,
+    .table-responsive .data-table td {
+        display: table-cell;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .table-responsive .data-table td::before {
+        content: none;
+    }
+}
+
+/* ========== MODAL OPTIMIZATIONS ========== */
+@media (max-width: 767px) {
+    .modal-overlay {
+        align-items: flex-end;
+        padding: 0;
+    }
+
+    .modal {
+        width: 100% !important;
+        max-width: 100% !important;
+        max-height: 92vh;
+        border-radius: var(--border-radius-xl) var(--border-radius-xl) 0 0;
+        margin: 0;
+        animation: slideUpModal 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .modal__body {
+        max-height: calc(92vh - 130px);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: var(--spacing-md);
+    }
+
+    .modal__header {
+        position: sticky;
+        top: 0;
+        background: var(--bg-secondary);
+        z-index: 10;
+        border-bottom: 1px solid var(--border-color);
+        padding: var(--spacing-md);
+        border-radius: var(--border-radius-xl) var(--border-radius-xl) 0 0;
+    }
+
+    .modal__footer {
+        position: sticky;
+        bottom: 0;
+        background: var(--bg-secondary);
+        z-index: 10;
+        border-top: 1px solid var(--border-color);
+        padding: var(--spacing-md);
+        padding-bottom: max(var(--spacing-md), env(safe-area-inset-bottom, 0px));
+        gap: var(--spacing-sm);
+    }
+
+    .modal__footer .btn {
+        flex: 1;
+    }
+
+    @keyframes slideUpModal {
+        from {
+            transform: translateY(100%);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+}
+
+/* ========== CARD HEADER RESPONSIVE ========== */
+@media (max-width: 480px) {
+    .card__header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-sm);
+    }
+
+    .card__header .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* ========== DASHBOARD STATS RESPONSIVE ========== */
+@media (max-width: 767px) {
+
+    /* Stats grid - 2 columns on mobile */
+    .dashboard__row--stats {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: var(--spacing-sm) !important;
+    }
+
+    .stat-card {
+        padding: var(--spacing-sm) !important;
+    }
+
+    .stat-card__value {
+        font-size: 1.1rem !important;
+    }
+
+    .stat-card__label {
+        font-size: 11px !important;
+    }
+}
+
+@media (max-width: 380px) {
+
+    /* 1 column on very small screens */
+    .dashboard__row--stats {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* ========== SETTINGS TABS RESPONSIVE ========== */
+@media (max-width: 767px) {
+    .settings-tabs {
+        display: flex;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        gap: 0;
+        padding: 0;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .settings-tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    .settings-tab {
+        white-space: nowrap;
+        flex-shrink: 0;
+        padding: var(--spacing-sm) var(--spacing-md);
+        font-size: var(--font-size-sm);
+        min-height: 44px;
+    }
+
+    /* Hide text, show only icon on very small screens */
+    .settings-tab span:not(.settings-tab__icon) {
+        display: inline;
+    }
+}
+
+/* ========== FORM IMPROVEMENTS ========== */
+@media (max-width: 767px) {
+
+    /* Better spacing for form groups */
+    .form-group {
+        margin-bottom: var(--spacing-sm);
+    }
+
+    /* Form rows stack on mobile */
+    .form-row {
+        grid-template-columns: 1fr !important;
+        gap: var(--spacing-sm);
+    }
+
+    /* Touch-friendly checkboxes grid */
+    .form-group [style*="grid-template-columns"] {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    /* Inputs need good touch targets */
+    .form-input,
+    .form-select,
+    .form-textarea {
+        min-height: 44px;
+        font-size: 16px;
+        /* Prevents iOS zoom on focus */
+    }
+}
+
+/* ========== SETTINGS ITEMS RESPONSIVE ========== */
+@media (max-width: 600px) {
+    .settings-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-sm);
+    }
+
+    .settings-item .toggle,
+    .settings-item .form-select,
+    .settings-item .form-input,
+    .settings-item .btn {
+        align-self: stretch;
+    }
+
+    /* Theme selector full width */
+    .theme-selector {
+        width: 100%;
+    }
+
+    .theme-option {
+        flex: 1;
+    }
+}
+
+/* ========== BADGE RESPONSIVE ========== */
+@media (max-width: 480px) {
+    .badge {
+        font-size: 10px;
+        padding: 2px 6px;
+    }
+}
+
+/* ========== SEARCH BAR MOBILE ========== */
+@media (max-width: 767px) {
+    .search-input .form-input {
+        font-size: 16px;
+        /* Prevent zoom */
+    }
+}
+
+/* ========== PERMISSIONS TABLE MOBILE ========== */
+@media (max-width: 767px) {
+
+    /* Make permission checkboxes grid more compact */
+    .permissions-table {
+        font-size: var(--font-size-xs);
+    }
+
+    .permissions-table th,
+    .permissions-table td {
+        padding: var(--spacing-xs);
+    }
+
+    .permissions-table th {
+        font-size: 10px;
+        text-transform: uppercase;
+    }
+}
+
+/* ========== FLOATING ACTION BUTTON ========== */
+@media (max-width: 767px) {
+    .fab {
+        position: fixed;
+        bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+        right: var(--spacing-md);
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: var(--color-primary-500);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 12px rgba(26, 115, 232, 0.4);
+        z-index: 100;
+        border: none;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .fab:active {
+        transform: scale(0.92);
+        box-shadow: 0 2px 8px rgba(26, 115, 232, 0.3);
+    }
+
+    .fab svg {
+        width: 24px;
+        height: 24px;
+    }
+}
+
+/* ========== USER TABLE MOBILE CARDS ========== */
+@media (max-width: 767px) {
+
+    /* User management cards instead of table */
+    .data-table__body tr {
+        display: flex;
+        flex-wrap: wrap;
+        padding: var(--spacing-md);
+        gap: var(--spacing-xs);
+    }
+
+    .data-table__body td:first-child {
+        width: 100%;
+        padding-bottom: var(--spacing-xs);
+        border-bottom: 1px solid var(--border-color);
+        margin-bottom: var(--spacing-xs);
+    }
+
+    /* Action buttons in a row */
+    .data-table__body td:last-child {
+        width: 100%;
+        display: flex;
+        justify-content: flex-end;
+        gap: var(--spacing-xs);
+        padding-top: var(--spacing-xs);
+        border-top: 1px solid var(--border-color);
+        margin-top: var(--spacing-xs);
+    }
+}
+
+/* ========== TOAST POSITION ADJUSTMENT ========== */
+@media (max-width: 767px) {
+    .toast-container {
+        bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
+        left: var(--spacing-md) !important;
+        right: var(--spacing-md) !important;
+    }
+
+    .toast {
+        width: 100%;
+        max-width: 100%;
+    }
+}
+
+/* ========== HEADER COMPACT MOBILE ========== */
+@media (max-width: 767px) {
+    .header {
+        padding: 0 var(--spacing-sm);
+    }
+
+    .header__actions {
+        gap: var(--spacing-xs);
+    }
+
+    /* Compact header buttons */
+    .header__action-btn {
+        width: 36px;
+        height: 36px;
+        padding: 0;
+    }
+}
+
+/* ========== SMOOTH SCROLLING ========== */
+@media (max-width: 767px) {
+    .content {
+        scroll-behavior: smooth;
+    }
+
+    /* Prevent rubber-banding on iOS */
+    .modal__body {
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* ========== EMPTY STATE MOBILE ========== */
+@media (max-width: 767px) {
+    .empty-state {
+        padding: var(--spacing-xl) var(--spacing-md);
+    }
+
+    .empty-state__icon {
+        width: 48px;
+        height: 48px;
+    }
+
+    .empty-state__title {
+        font-size: var(--font-size-lg);
+    }
+
+    .empty-state__description {
+        font-size: var(--font-size-sm);
+    }
+}
+
+/* ========== DROPDOWN MOBILE ========== */
+@media (max-width: 767px) {
+    .dropdown__menu {
+        position: fixed;
+        bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+        left: var(--spacing-md);
+        right: var(--spacing-md);
+        top: auto;
+        border-radius: var(--border-radius-lg);
+        animation: slideUpModal 0.2s ease;
+        max-height: 60vh;
+        overflow-y: auto;
+    }
+
+    .dropdown__item {
+        min-height: 48px;
+        padding: var(--spacing-md);
+    }
+}
+
+/* ========== NOTIFICATION PANEL MOBILE ========== */
+@media (max-width: 767px) {
+    .notification-panel {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        max-width: 100%;
+        border-radius: 0;
+        z-index: 1100;
+    }
+
+    .notification-panel__header {
+        padding-top: max(var(--spacing-md), env(safe-area-inset-top));
+    }
+}
+
+/* ========== PULL-DOWN INDICATOR ========== */
+@media (max-width: 767px) {
+    .pull-indicator {
+        position: fixed;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 36px;
+        height: 5px;
+        background: var(--color-neutral-300);
+        border-radius: var(--border-radius-full);
+        margin: var(--spacing-sm) auto;
+    }
+
+    /* Add pull indicator to modal */
+    .modal::before {
+        content: '';
+        display: block;
+        width: 36px;
+        height: 4px;
+        background: var(--color-neutral-300);
+        border-radius: var(--border-radius-full);
+        margin: var(--spacing-xs) auto var(--spacing-sm);
+    }
+}
