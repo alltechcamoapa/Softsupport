@@ -371,7 +371,7 @@ const PedidosModule = (() => {
                             <div class="form-group">
                                 <label class="form-label form-label--required">Categoría</label>
                                 <select name="categoria" class="form-select" required>
-                                    ${CATEGORIAS.map(cat => `
+                                    ${categorias.map(cat => `
                                         <option value="${cat.id}" ${pedido?.categoria === cat.id ? 'selected' : ''}>
                                             ${cat.icon} ${cat.nombre}
                                         </option>
@@ -563,7 +563,7 @@ const PedidosModule = (() => {
         if (!pedido) return;
 
         const cliente = DataService.getClienteById(pedido.clienteId);
-        const categoria = CATEGORIAS.find(c => c.id === pedido.categoria) || CATEGORIAS[6];
+        const categoria = categorias.find(c => c.id === pedido.categoria) || categorias[categorias.length - 1];
 
         document.getElementById('pedidoModal').innerHTML = `
             <div class="modal-overlay open" onclick="PedidosModule.closeModal(event)">
@@ -659,7 +659,7 @@ const PedidosModule = (() => {
         if (!pedido) return;
 
         const cliente = DataService.getClienteById(pedido.clienteId);
-        const categoria = CATEGORIAS.find(c => c.id === pedido.categoria) || CATEGORIAS[6];
+        const categoria = categorias.find(c => c.id === pedido.categoria) || categorias[categorias.length - 1];
 
         const content = `
             <div class="header">
@@ -767,7 +767,7 @@ const PedidosModule = (() => {
                                 <div class="form-row">
                                     <select id="reportCategoria" class="form-select" style="flex: 1;">
                                         <option value="">Seleccionar categoría...</option>
-                                        ${CATEGORIAS.map(cat => `<option value="${cat.id}">${cat.icon} ${cat.nombre}</option>`).join('')}
+                                        ${categorias.map(cat => `<option value="${cat.id}">${cat.icon} ${cat.nombre}</option>`).join('')}
                                     </select>
                                     <button type="button" class="btn btn--primary" onclick="PedidosModule.generateCategoriaReport()">
                                         ${Icons.fileText} Generar

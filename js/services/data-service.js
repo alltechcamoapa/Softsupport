@@ -72,12 +72,18 @@ const DataService = (() => {
                 clientes,
                 contratos,
                 equipos,
-                visitas
+                visitas,
+                productos,
+                proformas,
+                pedidos
             ] = await Promise.all([
                 SupabaseDataService.getClientesSync(),
                 SupabaseDataService.getContratosSync(),
                 SupabaseDataService.getEquiposSync(),
-                SupabaseDataService.getVisitasSync()
+                SupabaseDataService.getVisitasSync(),
+                SupabaseDataService.getProductosSync(),
+                SupabaseDataService.getProformasSync(),
+                SupabaseDataService.getPedidosSync()
             ]);
 
             // Normalizar y almacenar en caché
@@ -88,11 +94,27 @@ const DataService = (() => {
             // Visitas requieren un mapeo más profundo si tienen joins
             cache.visitas = (visitas || []).map(v => normalizeSupabaseData('visitas', v));
 
+            // Productos, proformas y pedidos
+            cache.productos = (productos || []).map(p => ({ ...p, productoId: p.id }));
+            cache.proformas = (proformas || []).map(p => ({
+                ...p,
+                proformaId: p.proforma_id,
+                clienteId: p.cliente_id,
+                cliente: p.cliente ? normalizeSupabaseData('clientes', p.cliente) : null
+            }));
+            cache.pedidos = (pedidos || []).map(p => ({
+                ...p,
+                pedidoId: p.pedido_id,
+                numeroPedido: p.numero_pedido,
+                clienteId: p.cliente_id,
+                cliente: p.cliente ? normalizeSupabaseData('clientes', p.cliente) : null
+            }));
+
             // Cargar permisos por defecto (hardcoded por seguridad)
             cache.permissions = loadDefaultPermissions();
 
             isInitialized = true;
-            console.log(`✅ DataService: Sincronización completa (${cache.clientes.length} Clientes, ${cache.contratos.length} Contratos)`);
+            console.log(`✅ DataService: Sincronización completa (${cache.clientes.length} Clientes, ${cache.contratos.length} Contratos, ${cache.productos.length} Productos)`);
 
             // Suscribirse a cambios en tiempo real
             setupRealtimeSubscription();
@@ -586,31 +608,41 @@ const DataService = (() => {
         });
     };
     const getProductoById = (id) => cache.productos.find(p => p.productoId === id || p.id === id);
-    const createProducto = (data) => {
-        const producto = { ...data, productoId: `PROD-${Date.now()}`, id: `PROD-${Date.now()}` };
-        cache.productos.unshift(producto);
-        LogService.log('productos', 'create', producto.id, `Producto creado: ${producto.nombre}`, { codigo: producto.productoId });
-        return producto;
+
+    const createProducto = async (data) => {
+        const res = await SupabaseDataService.createProducto(data);
+        if (res.success) {
+            const item = { ...res.data, productoId: res.data.id };
+            cache.productos.unshift(item);
+            LogService.log('productos', 'create', item.id, `Producto creado: ${item.nombre}`, { codigo: item.codigo });
+            return item;
+        }
+        throw new Error(res.error || 'Error al crear producto');
     };
-    const updateProducto = (id, data) => {
-        const idx = cache.productos.findIndex(p => p.productoId === id || p.id === id);
-        if (idx !== -1) {
-            const current = cache.productos[idx];
-            cache.productos[idx] = { ...current, ...data };
-            LogService.log('productos', 'update', id, `Producto actualizado: ${current.nombre}`);
+
+    const updateProducto = async (id, data) => {
+        const current = getProductoById(id);
+        const uuid = current ? current.id : id;
+        const res = await SupabaseDataService.updateProducto(uuid, data);
+        if (res.success) {
+            const idx = cache.productos.findIndex(p => p.id === uuid || p.productoId === id);
+            if (idx !== -1) cache.productos[idx] = { ...cache.productos[idx], ...res.data };
+            LogService.log('productos', 'update', uuid, `Producto actualizado: ${current?.nombre || data.nombre}`);
             return true;
         }
-        return false;
+        throw new Error(res.error || 'Error al actualizar producto');
     };
-    const deleteProducto = (id) => {
-        const idx = cache.productos.findIndex(p => p.productoId === id || p.id === id);
-        if (idx !== -1) {
-            const current = cache.productos[idx];
-            cache.productos.splice(idx, 1);
-            LogService.log('productos', 'delete', id, `Producto eliminado: ${current.nombre}`);
+
+    const deleteProducto = async (id) => {
+        const current = getProductoById(id);
+        const uuid = current ? current.id : id;
+        const res = await SupabaseDataService.deleteProducto(uuid);
+        if (res.success) {
+            cache.productos = cache.productos.filter(p => p.id !== uuid);
+            LogService.log('productos', 'delete', uuid, `Producto eliminado: ${current?.nombre || 'Desconocido'}`);
             return true;
         }
-        return false;
+        throw new Error(res.error || 'Error al eliminar producto');
     };
     const getSoftwareFiltered = () => [];
     const getSoftwareById = () => null;
@@ -642,35 +674,66 @@ const DataService = (() => {
         if (cache.proformas.length === 0) return 1;
         return Math.max(...cache.proformas.map(p => p.numero || 0)) + 1;
     };
-    const createProforma = (data) => {
+    const createProforma = async (data) => {
         const numero = getNextProformaNumber();
-        const proforma = {
-            ...data,
-            proformaId: `PROF-${String(numero).padStart(4, '0')}`,
+        const proformaData = {
+            proforma_id: `PROF-${String(numero).padStart(4, '0')}`,
             numero,
+            cliente_id: data.clienteId,
             fecha: data.fecha || new Date().toISOString().split('T')[0],
-            estado: 'Activa',
+            validez_dias: data.validezDias || 15,
+            moneda: data.moneda || 'USD',
+            items: data.items || [],
             subtotal: data.items?.reduce((sum, i) => sum + (i.total || 0), 0) || 0,
-            total: data.items?.reduce((sum, i) => sum + (i.total || 0), 0) || 0
+            total: data.items?.reduce((sum, i) => sum + (i.total || 0), 0) || 0,
+            notas: data.notas || '',
+            estado: 'Activa',
+            creado_por: data.creadoPor || ''
         };
-        cache.proformas.unshift(proforma);
-        return proforma;
+
+        const res = await SupabaseDataService.createProforma(proformaData);
+        if (res.success) {
+            const item = { ...res.data, proformaId: res.data.proforma_id, clienteId: res.data.cliente_id };
+            cache.proformas.unshift(item);
+            LogService.log('proformas', 'create', item.id, `Proforma creada: ${item.proforma_id}`);
+            return item;
+        }
+        throw new Error(res.error || 'Error al crear proforma');
     };
-    const updateProforma = (id, data) => {
-        const idx = cache.proformas.findIndex(p => p.proformaId === id || p.id === id);
-        if (idx !== -1) {
-            cache.proformas[idx] = { ...cache.proformas[idx], ...data };
+
+    const updateProforma = async (id, data) => {
+        const current = getProformaById(id);
+        const uuid = current ? current.id : id;
+
+        const updateData = {
+            cliente_id: data.clienteId || current?.cliente_id,
+            items: data.items || current?.items,
+            subtotal: data.subtotal,
+            total: data.total,
+            notas: data.notas,
+            estado: data.estado
+        };
+
+        const res = await SupabaseDataService.updateProforma(uuid, updateData);
+        if (res.success) {
+            const idx = cache.proformas.findIndex(p => p.id === uuid || p.proformaId === id);
+            if (idx !== -1) cache.proformas[idx] = { ...cache.proformas[idx], ...res.data };
+            LogService.log('proformas', 'update', uuid, `Proforma actualizada: ${current?.proformaId || id}`);
             return true;
         }
-        return false;
+        throw new Error(res.error || 'Error al actualizar proforma');
     };
-    const deleteProforma = (id) => {
-        const idx = cache.proformas.findIndex(p => p.proformaId === id || p.id === id);
-        if (idx !== -1) {
-            cache.proformas.splice(idx, 1);
+
+    const deleteProforma = async (id) => {
+        const current = getProformaById(id);
+        const uuid = current ? current.id : id;
+        const res = await SupabaseDataService.deleteProforma(uuid);
+        if (res.success) {
+            cache.proformas = cache.proformas.filter(p => p.id !== uuid);
+            LogService.log('proformas', 'delete', uuid, `Proforma eliminada: ${current?.proformaId || id}`);
             return true;
         }
-        return false;
+        throw new Error(res.error || 'Error al eliminar proforma');
     };
     const getProformasStats = () => ({
         total: cache.proformas?.length || 0,
@@ -692,34 +755,68 @@ const DataService = (() => {
         }));
         return maxNum + 1;
     };
-    const createPedido = (data) => {
+    const createPedido = async (data) => {
         const numero = getNextPedidoNumber();
-        const pedido = {
-            ...data,
-            pedidoId: `PED-${String(numero).padStart(5, '0')}`,
-            numeroPedido: `PED-${String(numero).padStart(5, '0')}`,
+        const pedidoData = {
+            pedido_id: `PED-${String(numero).padStart(5, '0')}`,
+            numero_pedido: `PED-${String(numero).padStart(5, '0')}`,
+            cliente_id: data.clienteId,
+            categoria: data.categoria || '',
             fecha: data.fecha || new Date().toISOString(),
-            estado: data.estado || 'Pendiente',
-            createdAt: new Date().toISOString()
+            items: data.items || [],
+            total: data.total || 0,
+            notas: data.notas || '',
+            estado: data.estado || 'Pendiente'
         };
-        cache.pedidos.unshift(pedido);
-        return pedido;
+
+        const res = await SupabaseDataService.createPedido(pedidoData);
+        if (res.success) {
+            const item = {
+                ...res.data,
+                pedidoId: res.data.pedido_id,
+                numeroPedido: res.data.numero_pedido,
+                clienteId: res.data.cliente_id
+            };
+            cache.pedidos.unshift(item);
+            LogService.log('pedidos', 'create', item.id, `Pedido creado: ${item.pedido_id}`);
+            return item;
+        }
+        throw new Error(res.error || 'Error al crear pedido');
     };
-    const updatePedido = (id, data) => {
-        const idx = cache.pedidos.findIndex(p => p.pedidoId === id || p.id === id);
-        if (idx !== -1) {
-            cache.pedidos[idx] = { ...cache.pedidos[idx], ...data, updatedAt: new Date().toISOString() };
+
+    const updatePedido = async (id, data) => {
+        const current = getPedidoById(id);
+        const uuid = current ? current.id : id;
+
+        const updateData = {
+            cliente_id: data.clienteId || current?.cliente_id,
+            categoria: data.categoria,
+            items: data.items,
+            total: data.total,
+            notas: data.notas,
+            estado: data.estado
+        };
+
+        const res = await SupabaseDataService.updatePedido(uuid, updateData);
+        if (res.success) {
+            const idx = cache.pedidos.findIndex(p => p.id === uuid || p.pedidoId === id);
+            if (idx !== -1) cache.pedidos[idx] = { ...cache.pedidos[idx], ...res.data };
+            LogService.log('pedidos', 'update', uuid, `Pedido actualizado: ${current?.pedidoId || id}`);
             return true;
         }
-        return false;
+        throw new Error(res.error || 'Error al actualizar pedido');
     };
-    const deletePedido = (id) => {
-        const idx = cache.pedidos.findIndex(p => p.pedidoId === id || p.id === id);
-        if (idx !== -1) {
-            cache.pedidos.splice(idx, 1);
+
+    const deletePedido = async (id) => {
+        const current = getPedidoById(id);
+        const uuid = current ? current.id : id;
+        const res = await SupabaseDataService.deletePedido(uuid);
+        if (res.success) {
+            cache.pedidos = cache.pedidos.filter(p => p.id !== uuid);
+            LogService.log('pedidos', 'delete', uuid, `Pedido eliminado: ${current?.pedidoId || id}`);
             return true;
         }
-        return false;
+        throw new Error(res.error || 'Error al eliminar pedido');
     };
     const getPedidosStats = () => ({
         total: cache.pedidos?.length || 0,
@@ -767,6 +864,10 @@ const DataService = (() => {
         getProductosSync, getProductosFiltered, getProductoById, createProducto, updateProducto, deleteProducto,
         getSoftwareFiltered, getSoftwareById, getSoftwareByRegistro, getSoftwareUniqueRegistros, createSoftware, updateSoftware, deleteSoftware,
         getProformasSync, getProformasFiltered, getProformaById, getProformasByCliente, getProformasByRango, getNextProformaNumber, createProforma, updateProforma, deleteProforma, getProformasStats,
+
+        // Pedidos
+        getPedidosSync, getPedidoById, getPedidosByCliente, getNextPedidoNumber, createPedido, updatePedido, deletePedido, getPedidosStats,
+
         getContractTemplates, getContractTemplateById, saveContractTemplate, deleteContractTemplate
     };
 })();

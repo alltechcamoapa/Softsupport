@@ -415,10 +415,11 @@ const SupabaseDataService = (() => {
 
         if (error) {
             console.error('❌ Error en createEquipo:', error);
+            console.error('❌ Detalles del error:', JSON.stringify(error, null, 2));
             return { error: handleSupabaseError(error, 'createEquipo') };
         }
 
-        console.log('✅ Equipo creado:', data);
+        console.log('✅ Equipo creado exitosamente:', data);
         return { data, success: true };
     };
 
@@ -529,6 +530,309 @@ const SupabaseDataService = (() => {
         return subscription;
     };
 
+    // ========== PRODUCTOS ==========
+    const getProductosSync = async () => {
+        if (!client) return [];
+
+        const { data, error } = await client
+            .from('productos')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('Error fetching productos:', error);
+            return [];
+        }
+
+        return data || [];
+    };
+
+    const getProductoById = async (id) => {
+        if (!client) return null;
+
+        const { data, error } = await client
+            .from('productos')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (error) {
+            console.error('Error fetching producto:', error);
+            return null;
+        }
+
+        return data;
+    };
+
+    const createProducto = async (productoData) => {
+        if (!client) return { error: 'Not initialized' };
+
+        // Generar código si no existe
+        if (!productoData.codigo) {
+            productoData.codigo = 'PROD' + Date.now().toString().slice(-6);
+        }
+
+        const user = await getCurrentUser();
+        if (user) {
+            productoData.created_by = user.id;
+        }
+
+        console.log('📤 Creando producto con datos:', productoData);
+
+        const { data, error } = await client
+            .from('productos')
+            .insert([productoData])
+            .select()
+            .single();
+
+        if (error) {
+            console.error('❌ Error en createProducto:', error);
+            return { error: handleSupabaseError(error, 'createProducto') };
+        }
+
+        console.log('✅ Producto creado:', data);
+        return { data, success: true };
+    };
+
+    const updateProducto = async (id, updates) => {
+        if (!client) return { error: 'Not initialized' };
+
+        const { data, error } = await client
+            .from('productos')
+            .update({ ...updates, updated_at: new Date().toISOString() })
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) {
+            return { error: handleSupabaseError(error, 'updateProducto') };
+        }
+
+        return { data, success: true };
+    };
+
+    const deleteProducto = async (id) => {
+        if (!client) return { error: 'Not initialized' };
+
+        const { error } = await client
+            .from('productos')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            return { error: handleSupabaseError(error, 'deleteProducto') };
+        }
+
+        return { success: true };
+    };
+
+    // ========== PROFORMAS ==========
+    const getProformasSync = async () => {
+        if (!client) return [];
+
+        const { data, error } = await client
+            .from('proformas')
+            .select(`
+                *,
+                cliente:clientes(*)
+            `)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('Error fetching proformas:', error);
+            return [];
+        }
+
+        return data || [];
+    };
+
+    const getProformaById = async (id) => {
+        if (!client) return null;
+
+        const { data, error } = await client
+            .from('proformas')
+            .select(`
+                *,
+                cliente:clientes(*)
+            `)
+            .eq('id', id)
+            .single();
+
+        if (error) {
+            console.error('Error fetching proforma:', error);
+            return null;
+        }
+
+        return data;
+    };
+
+    const createProforma = async (proformaData) => {
+        if (!client) return { error: 'Not initialized' };
+
+        // Generar ID si no existe
+        if (!proformaData.proforma_id) {
+            proformaData.proforma_id = 'PROF' + Date.now().toString().slice(-6);
+        }
+
+        const user = await getCurrentUser();
+        if (user) {
+            proformaData.created_by = user.id;
+        }
+
+        console.log('📤 Creando proforma con datos:', proformaData);
+
+        const { data, error } = await client
+            .from('proformas')
+            .insert([proformaData])
+            .select()
+            .single();
+
+        if (error) {
+            console.error('❌ Error en createProforma:', error);
+            return { error: handleSupabaseError(error, 'createProforma') };
+        }
+
+        console.log('✅ Proforma creada:', data);
+        return { data, success: true };
+    };
+
+    const updateProforma = async (id, updates) => {
+        if (!client) return { error: 'Not initialized' };
+
+        const { data, error } = await client
+            .from('proformas')
+            .update({ ...updates, updated_at: new Date().toISOString() })
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) {
+            return { error: handleSupabaseError(error, 'updateProforma') };
+        }
+
+        return { data, success: true };
+    };
+
+    const deleteProforma = async (id) => {
+        if (!client) return { error: 'Not initialized' };
+
+        const { error } = await client
+            .from('proformas')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            return { error: handleSupabaseError(error, 'deleteProforma') };
+        }
+
+        return { success: true };
+    };
+
+    // ========== PEDIDOS ==========
+    const getPedidosSync = async () => {
+        if (!client) return [];
+
+        const { data, error } = await client
+            .from('pedidos')
+            .select(`
+                *,
+                cliente:clientes(*)
+            `)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('Error fetching pedidos:', error);
+            return [];
+        }
+
+        return data || [];
+    };
+
+    const getPedidoById = async (id) => {
+        if (!client) return null;
+
+        const { data, error } = await client
+            .from('pedidos')
+            .select(`
+                *,
+                cliente:clientes(*)
+            `)
+            .eq('id', id)
+            .single();
+
+        if (error) {
+            console.error('Error fetching pedido:', error);
+            return null;
+        }
+
+        return data;
+    };
+
+    const createPedido = async (pedidoData) => {
+        if (!client) return { error: 'Not initialized' };
+
+        // Generar IDs si no existen
+        if (!pedidoData.pedido_id) {
+            pedidoData.pedido_id = 'PED' + Date.now().toString().slice(-6);
+        }
+        if (!pedidoData.numero_pedido) {
+            pedidoData.numero_pedido = pedidoData.pedido_id;
+        }
+
+        const user = await getCurrentUser();
+        if (user) {
+            pedidoData.created_by = user.id;
+        }
+
+        console.log('📤 Creando pedido con datos:', pedidoData);
+
+        const { data, error } = await client
+            .from('pedidos')
+            .insert([pedidoData])
+            .select()
+            .single();
+
+        if (error) {
+            console.error('❌ Error en createPedido:', error);
+            return { error: handleSupabaseError(error, 'createPedido') };
+        }
+
+        console.log('✅ Pedido creado:', data);
+        return { data, success: true };
+    };
+
+    const updatePedido = async (id, updates) => {
+        if (!client) return { error: 'Not initialized' };
+
+        const { data, error } = await client
+            .from('pedidos')
+            .update({ ...updates, updated_at: new Date().toISOString() })
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) {
+            return { error: handleSupabaseError(error, 'updatePedido') };
+        }
+
+        return { data, success: true };
+    };
+
+    const deletePedido = async (id) => {
+        if (!client) return { error: 'Not initialized' };
+
+        const { error } = await client
+            .from('pedidos')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            return { error: handleSupabaseError(error, 'deletePedido') };
+        }
+
+        return { success: true };
+    };
+
     // ========== PUBLIC API ==========
     return {
         // Inicialización
@@ -573,6 +877,27 @@ const SupabaseDataService = (() => {
         // Visitas
         getVisitasSync,
 
+        // Productos
+        getProductosSync,
+        getProductoById,
+        createProducto,
+        updateProducto,
+        deleteProducto,
+
+        // Proformas
+        getProformasSync,
+        getProformaById,
+        createProforma,
+        updateProforma,
+        deleteProforma,
+
+        // Pedidos
+        getPedidosSync,
+        getPedidoById,
+        createPedido,
+        updatePedido,
+        deletePedido,
+
         // Helpers
         generateCode
     };
@@ -588,3 +913,4 @@ if (typeof window !== 'undefined') {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = SupabaseDataService;
 }
+

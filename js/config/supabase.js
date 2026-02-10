@@ -214,6 +214,11 @@ const handleSupabaseError = (error, context = '') => {
 };
 
 // ========== EXPORTAR ==========
+// Make functions globally available for browser
+if (typeof window !== 'undefined') {
+    window.handleSupabaseError = handleSupabaseError;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         initSupabase,

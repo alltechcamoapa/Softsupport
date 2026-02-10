@@ -676,8 +676,25 @@ const EquiposModule = (() => {
   const handleClienteFilter = (value) => { filterState.clienteId = value; App.refreshCurrentModule(); };
   const handleEstadoFilter = (value) => { filterState.estado = value; App.refreshCurrentModule(); };
 
+  let isSubmitting = false; // Flag para prevenir doble submit
+
   const handleSubmit = async (event) => {
     event.preventDefault();
+
+    // Prevenir múltiples envíos
+    if (isSubmitting) {
+      console.log('⚠️ Submit en progreso, ignorando...');
+      return;
+    }
+    isSubmitting = true;
+
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn?.innerHTML;
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '⏳ Guardando...';
+    }
+
     const formData = new FormData(event.target);
     const rawData = Object.fromEntries(formData.entries());
 
@@ -695,21 +712,36 @@ const EquiposModule = (() => {
       estado: rawData.estado || 'Operativo'
     };
 
+    console.log('📤 Datos a enviar:', data);
+
     try {
       if (rawData.equipoId && rawData.equipoId.trim() !== '') {
         // Actualizar equipo existente
-        await DataService.updateEquipo(rawData.equipoId, data);
-        console.log('✅ Equipo actualizado correctamente');
+        const result = await DataService.updateEquipo(rawData.equipoId, data);
+        console.log('✅ Equipo actualizado:', result);
+        if (typeof ConfigModule !== 'undefined' && ConfigModule.showToast) {
+          ConfigModule.showToast('Equipo actualizado correctamente', 'success');
+        }
       } else {
         // Crear nuevo equipo
-        await DataService.createEquipo(data);
-        console.log('✅ Equipo creado correctamente');
+        const result = await DataService.createEquipo(data);
+        console.log('✅ Equipo creado:', result);
+        if (typeof ConfigModule !== 'undefined' && ConfigModule.showToast) {
+          ConfigModule.showToast('Equipo creado correctamente', 'success');
+        }
       }
       closeModal();
       App.refreshCurrentModule();
     } catch (error) {
       console.error('❌ Error al guardar equipo:', error);
       alert('Error al guardar el equipo: ' + (error.message || 'Error desconocido'));
+      // Restaurar botón
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+      }
+    } finally {
+      isSubmitting = false;
     }
   };
 
