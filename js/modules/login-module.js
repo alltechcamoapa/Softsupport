@@ -195,8 +195,6 @@ const LoginModule = (() => {
             // Inicializar DataService y luego renderizar
             setTimeout(async () => {
                 try {
-                    console.log('☁️ Cargando datos desde Supabase...');
-
                     // Inicializar DataService ANTES de renderizar
                     const dataLoaded = await DataService.init();
                     if (!dataLoaded) {
@@ -209,7 +207,7 @@ const LoginModule = (() => {
                     }
 
                     if (typeof App !== 'undefined' && App.render) {
-                        console.log('🎨 Renderizando aplicación...');
+                        // console.log('🎨 Renderizando aplicación...');
                         App.render();
 
                         // Mostrar toast de bienvenida

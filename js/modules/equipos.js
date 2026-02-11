@@ -215,6 +215,22 @@ const EquiposModule = (() => {
                      value="${equipo?.nombreEquipo || ''}" 
                      placeholder="Ej: Servidor Principal" required>
             </div>
+            
+            <div class="form-group">
+                <label class="form-label form-label--required">Tipo de Equipo</label>
+                <input type="text" name="tipoEquipo" class="form-input" list="tipoEquipoList"
+                       value="${equipo?.tipoEquipo || ''}" 
+                       placeholder="Ej: Laptop, PC, Servidor..." required>
+                <datalist id="tipoEquipoList">
+                    <option value="Laptop">
+                    <option value="PC Escritorio">
+                    <option value="Servidor">
+                    <option value="Impresora">
+                    <option value="Router / Switch">
+                    <option value="Tablet">
+                    <option value="Teléfono">
+                </datalist>
+            </div>
 
             <div class="form-row">
               <div class="form-group">
@@ -702,9 +718,11 @@ const EquiposModule = (() => {
     const cliente = DataService.getClienteById(rawData.clienteId);
 
     // Mapear camelCase (UI) a snake_case (DB)
+    // Mapear camelCase (UI) a snake_case (DB)
     const data = {
       cliente_id: cliente?.id || rawData.clienteId,  // Usar UUID de Supabase
       nombre_equipo: rawData.nombreEquipo,
+      tipo_equipo: rawData.tipoEquipo || 'Equipo General', // Default fallback
       marca: rawData.marca,
       modelo: rawData.modelo,
       serie: rawData.serie,

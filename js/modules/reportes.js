@@ -140,7 +140,7 @@ const ReportesModule = (() => {
           <div class="card">
             <div class="card__header">
               <h4 class="card__title">Historial por Cliente</h4>
-              <button class="btn btn--ghost btn--sm">Ver todo</button>
+              <button class="btn btn--ghost btn--sm" onclick="App.setCurrentModule('clientes')">Ver todo</button>
             </div>
             <div class="card__body" style="padding: 0;">
               ${renderClienteHistory(stats.historialClientes)}
@@ -154,6 +154,102 @@ const ReportesModule = (() => {
             </div>
             <div class="card__body" style="padding: 0;">
               ${renderEquipoStatus(stats.estadoEquipos)}
+            </div>
+          </div>
+        </div>
+
+        <!-- REPORT CENTER SECTION -->
+        <div class="report-center" style="margin-top: var(--spacing-xl);">
+          <div class="module-header" style="margin-bottom: var(--spacing-md);">
+            <div class="module-header__left">
+              <h3 class="module-title" style="font-size: 1.25rem;">${Icons.fileText} Centro de Generación de Reportes</h3>
+              <p class="module-subtitle">Acceso directo a todos los generadores de reportes del sistema</p>
+            </div>
+          </div>
+          
+          <div class="reports-grid" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));">
+            <!-- Reporte de Visitas -->
+            <div class="card report-card clickable-card" onclick="ReportesModule.openExternalReport('visitas')">
+              <div class="card__body">
+                <div class="report-card__header">
+                  <div class="report-card__icon" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;">${Icons.wrench || '🔧'}</div>
+                  <div class="report-card__title">Visitas y Servicios</div>
+                </div>
+                <p class="report-card__desc">Reporte detallado de visitas de soporte, servicios eventuales y remotos.</p>
+                <div class="report-card__footer">
+                  <span class="btn btn--ghost btn--sm">Abrir Generador ${Icons.chevronRight}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Reporte de Contratos -->
+            <div class="card report-card clickable-card" onclick="ReportesModule.openExternalReport('contratos')">
+              <div class="card__body">
+                <div class="report-card__header">
+                  <div class="report-card__icon" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">${Icons.fileText}</div>
+                  <div class="report-card__title">Contratos de Mantenimiento</div>
+                </div>
+                <p class="report-card__desc">Historial de servicios realizados bajo contrato y cumplimiento de pólizas.</p>
+                <div class="report-card__footer">
+                  <span class="btn btn--ghost btn--sm">Abrir Generador ${Icons.chevronRight}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Reporte de Pedidos -->
+            <div class="card report-card clickable-card" onclick="ReportesModule.openExternalReport('pedidos')">
+              <div class="card__body">
+                <div class="report-card__header">
+                  <div class="report-card__icon" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">${Icons.shoppingBag || '🛒'}</div>
+                  <div class="report-card__title">Pedidos y Compras</div>
+                </div>
+                <p class="report-card__desc">Reportes por cliente, categorías y rango de fechas de todos los pedidos.</p>
+                <div class="report-card__footer">
+                  <span class="btn btn--ghost btn--sm">Abrir Generador ${Icons.chevronRight}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Reporte de Software -->
+            <div class="card report-card clickable-card" onclick="ReportesModule.openExternalReport('software')">
+              <div class="card__body">
+                <div class="report-card__header">
+                  <div class="report-card__icon" style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6;">${Icons.package || '📦'}</div>
+                  <div class="report-card__title">Software y Licencia</div>
+                </div>
+                <p class="report-card__desc">Reportes de registros de software, series y activaciones por cliente.</p>
+                <div class="report-card__footer">
+                  <span class="btn btn--ghost btn--sm">Abrir Generador ${Icons.chevronRight}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Reporte de Prestaciones -->
+            <div class="card report-card clickable-card" onclick="ReportesModule.openExternalReport('prestaciones')">
+              <div class="card__body">
+                <div class="report-card__header">
+                  <div class="report-card__icon" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;">${Icons.users}</div>
+                  <div class="report-card__title">Nóminas y Prestaciones</div>
+                </div>
+                <p class="report-card__desc">Reportes de aguinaldos, vacaciones, recibos de pago y liquidaciones.</p>
+                <div class="report-card__footer">
+                  <span class="btn btn--ghost btn--sm">Ir a Módulo ${Icons.chevronRight}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Reporte de Productos -->
+            <div class="card report-card clickable-card" onclick="ReportesModule.generateInventoryReport()">
+              <div class="card__body">
+                <div class="report-card__header">
+                  <div class="report-card__icon" style="background: rgba(239, 68, 68, 0.1); color: #ef4444;">${Icons.box || '📦'}</div>
+                  <div class="report-card__title">Catálogo / Inventario</div>
+                </div>
+                <p class="report-card__desc">Generar listado completo de productos y servicios con precios vigentes.</p>
+                <div class="report-card__footer">
+                  <span class="btn btn--ghost btn--sm">Generar Ahora ${Icons.fileText}</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -330,29 +426,164 @@ const ReportesModule = (() => {
     alert('Exportando analíticas del dashboard (simulado)...');
   };
 
-  // ========== GENERAL REPORT GENERATION ==========
+  // ========== ACTIONS ==========
+  const openExternalReport = (type) => {
+    switch (type) {
+      case 'contratos':
+        App.setCurrentModule('contratos');
+        setTimeout(() => {
+          if (typeof ContratosModule !== 'undefined') {
+            // No hay modal general de reportes en Contratos, pero podemos abrir el primer contrato si existe
+            // O simplemente dejar que el usuario elija. Para cumplir con el "vibe" premium:
+            // Intentar abrir el generador de reportes del primer contrato activo si hay uno?
+            // Mejor: mostrar un aviso o simplemente dejarlo ahí.
+          }
+        }, 100);
+        break;
+      case 'pedidos':
+        if (typeof PedidosModule !== 'undefined') {
+          PedidosModule.openReportModal();
+        } else {
+          App.setCurrentModule('pedidos');
+          setTimeout(() => PedidosModule?.openReportModal(), 200);
+        }
+        break;
+      case 'visitas':
+        if (typeof VisitasModule !== 'undefined') {
+          VisitasModule.openReportModal();
+        } else {
+          App.setCurrentModule('visitas');
+          setTimeout(() => VisitasModule?.openReportModal(), 200);
+        }
+        break;
+      case 'software':
+        if (typeof SoftwareModule !== 'undefined') {
+          SoftwareModule.openReportModal();
+        } else {
+          App.setCurrentModule('software');
+          setTimeout(() => SoftwareModule?.openReportModal(), 200);
+        }
+        break;
+      case 'prestaciones':
+        App.setCurrentModule('prestaciones');
+        setTimeout(() => {
+          if (typeof PrestacionesModule !== 'undefined') {
+            PrestacionesModule.changeTab('reportes');
+          }
+        }, 200);
+        break;
+    }
+  };
+
+  const generateInventoryReport = () => {
+    const productos = DataService.getProductosSync();
+    const content = `
+      <div class="header">
+        <h1>Catálogo General de Productos y Servicios</h1>
+        <p>Reporte de Inventario y Precios</p>
+        <p>Fecha de emisión: ${new Date().toLocaleDateString('es-NI')}</p>
+      </div>
+      
+      <div class="section">
+        <div class="section-title">Resumen de Catálogo</div>
+        <div style="display: flex; gap: 20px; margin-bottom: 20px;">
+           <div style="flex: 1; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #1a73e8;">
+             <div style="font-size: 10px; color: #666; text-transform: uppercase;">Total Items</div>
+             <div style="font-size: 20px; font-weight: bold;">${productos.length}</div>
+           </div>
+           <div style="flex: 1; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #10b981;">
+             <div style="font-size: 10px; color: #666; text-transform: uppercase;">Productos</div>
+             <div style="font-size: 20px; font-weight: bold;">${productos.filter(p => p.tipo === 'Producto').length}</div>
+           </div>
+           <div style="flex: 1; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #8b5cf6;">
+             <div style="font-size: 10px; color: #666; text-transform: uppercase;">Servicios</div>
+             <div style="font-size: 20px; font-weight: bold;">${productos.filter(p => p.tipo === 'Servicio').length}</div>
+           </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Nombre / Descripción</th>
+              <th>Categoría</th>
+              <th>Tipo</th>
+              <th>Precio Venta</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${productos.map(p => `
+              <tr>
+                <td><code style="background: #f1f5f9; padding: 2px 4px; border-radius: 4px;">${p.codigo || 'N/A'}</code></td>
+                <td>
+                  <div style="font-weight: 600;">${p.nombre}</div>
+                  <div style="font-size: 10px; color: #777;">${p.descripcion || ''}</div>
+                </td>
+                <td>${p.categoria || '-'}</td>
+                <td><span class="badge" style="background: ${p.tipo === 'Servicio' ? '#e0f2fe' : '#dcfce7'}; color: ${p.tipo === 'Servicio' ? '#0369a1' : '#15803d'}; font-size: 9px;">${p.tipo}</span></td>
+                <td style="font-weight: bold;">$${(parseFloat(p.precio) || 0).toFixed(2)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    printReport('Reporte de Inventario', content);
+  };
+
+  const printReport = (title, content) => {
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>${title}</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; padding: 40px; color: #334155; line-height: 1.5; }
+          .header { text-align: center; margin-bottom: 40px; border-bottom: 3px solid #3b82f6; padding-bottom: 20px; }
+          .header h1 { color: #1e3a8a; font-size: 26px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+          .header p { color: #64748b; font-size: 13px; }
+          .section { margin-bottom: 30px; }
+          .section-title { font-size: 16px; font-weight: 700; color: #3b82f6; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; text-transform: uppercase; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+          th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 11px; }
+          th { background: #f8fafc; color: #475569; font-weight: 700; text-transform: uppercase; }
+          tr:nth-child(even) { background: #f1f5f9; }
+          .badge { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 10px; font-weight: 600; }
+          .badge-success { background: #dcfce7; color: #155e75; }
+          .footer { margin-top: 50px; text-align: center; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 20px; }
+          @media print { body { padding: 20px; } }
+        </style>
+      </head>
+      <body>
+        ${content}
+        <div class="footer">
+          <p>Soporte Técnico ALLTECH - Sistema de Gestión Cloud</p>
+          <p>Generado automáticamente en ${new Date().toLocaleString('es-NI')}</p>
+        </div>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+    setTimeout(() => printWindow.print(), 500);
+  };
+
   const generateGeneralReport = () => {
     const visitas = DataService.getVisitasSync();
-
-    // We can respect the timeframe filters if set to 'custom', otherwise default to all or prompt?
-    // User request: "filtro de reportes general de todos los trabajos y visitas realizadas"
-    // I will include ALL visited, sorted by date.
-
-    // Using DataService.getReportesStats logic partly or just fetching raw data
-    // Assuming filters are relevant if set, but for "General Report" let's just dump everything or respect current filtered state?
-    // Let's use getVisitasSync (which returns all) and filter if period is set? 
-    // For now, listing ALL as per "General Report" naming.
     const sortedVisitas = [...visitas].sort((a, b) => new Date(b.fechaInicio) - new Date(a.fechaInicio));
 
     const content = `
       <div class="header">
-        <h1>Reporte General de Trabajos y Visitas</h1>
-        <p>Fecha de emisión: ${new Date().toLocaleDateString('es-NI')}</p>
-        <p>Total de Registros: ${sortedVisitas.length}</p>
+        <h1>Reporte de Actividades y Visitas</h1>
+        <p>Resumen detallado de servicios realizados</p>
+        <p>Fecha: ${new Date().toLocaleDateString('es-NI')}</p>
       </div>
       
       <div class="section">
-        <div class="section-title">Detalle de Actividades</div>
+        <div class="section-title">Listado de Servicios</div>
         <table>
           <thead>
             <tr>
@@ -369,16 +600,16 @@ const ReportesModule = (() => {
       const cliente = DataService.getClienteById(v.clienteId);
       return `
                 <tr>
-                  <td>${new Date(v.fechaInicio).toLocaleDateString('es-NI')}</td>
+                  <td style="white-space: nowrap;">${new Date(v.fechaInicio).toLocaleDateString('es-NI')}</td>
                   <td>
-                    <div>${cliente?.empresa || 'N/A'}</div>
+                    <div style="font-weight: bold;">${cliente?.empresa || 'N/A'}</div>
                     <div style="font-size: 9px; color: #666;">${cliente?.nombreCliente || ''}</div>
                   </td>
                   <td>${v.tipoVisita}</td>
-                  <td>${v.usuarioSoporte}</td>
-                  <td>${v.descripcionTrabajo}</td>
+                  <td>${v.usuarioSoporte || 'N/A'}</td>
+                  <td>${v.descripcionTrabajo || '-'}</td>
                   <td>
-                    <span class="badge badge-${v.trabajoRealizado ? 'success' : 'warning'}">
+                    <span class="badge" style="background: ${v.trabajoRealizado ? '#dcfce7' : '#fef3c7'}; color: ${v.trabajoRealizado ? '#166534' : '#92400e'};">
                       ${v.trabajoRealizado ? 'Completado' : 'Pendiente'}
                     </span>
                   </td>
@@ -390,45 +621,17 @@ const ReportesModule = (() => {
       </div>
     `;
 
-    // Re-use the print logic (maybe refactor to a shared utility later, but for now inline)
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <title>Reporte General</title>
-        <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { font-family: Arial, sans-serif; padding: 40px; color: #333; }
-          .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #1a73e8; padding-bottom: 20px; }
-          .header h1 { color: #1a73e8; font-size: 24px; }
-          .header p { color: #666; margin-top: 5px; }
-          .section { margin-bottom: 25px; }
-          .section-title { font-size: 16px; font-weight: bold; color: #1a73e8; margin-bottom: 10px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-          th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; font-size: 11px; }
-          th { background: #1a73e8; color: white; font-weight: 600; }
-          tr:nth-child(even) { background: #f8f9fa; }
-          .badge { display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: 500; }
-          .badge-success { background: #d4edda; color: #155724; }
-          .badge-warning { background: #fff3cd; color: #856404; }
-          @media print { body { padding: 20px; } }
-        </style>
-      </head>
-      <body>
-        ${content}
-        <div style="margin-top: 40px; text-align: center; font-size: 10px; color: #999; border-top: 1px solid #ddd; padding-top: 10px;">
-          <p>Generado automáticamente por ALLTECH</p>
-        </div>
-      </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
+    printReport('Reporte General de Visitas', content);
   };
 
   return {
-    render, handlePeriodoFilter, handleFechaInicio, handleFechaFin, exportReport, generateGeneralReport
+    render,
+    handlePeriodoFilter,
+    handleFechaInicio,
+    handleFechaFin,
+    exportReport,
+    generateGeneralReport,
+    openExternalReport,
+    generateInventoryReport
   };
 })();

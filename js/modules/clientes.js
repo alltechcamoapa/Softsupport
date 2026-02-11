@@ -246,10 +246,12 @@ const ClientesModule = (() => {
   };
 
   const renderDetailModal = (cliente) => {
-    const contratos = DataService.getContratosByCliente(cliente.clienteId);
-    const equipos = DataService.getEquiposByCliente(cliente.clienteId);
-    const visitas = DataService.getVisitasByCliente(cliente.clienteId);
-    const proformas = DataService.getProformasByCliente(cliente.clienteId);
+    // Usar el UUID (cliente.id) para filtrar relaciones, ya que es la FK en tablas relacionadas
+    const uuid = cliente.id;
+    const contratos = DataService.getContratosByCliente(uuid);
+    const equipos = DataService.getEquiposByCliente(uuid);
+    const visitas = DataService.getVisitasByCliente(uuid);
+    const proformas = DataService.getProformasByCliente(uuid);
 
     return `
       <div class="modal-overlay open" onclick="ClientesModule.closeModal(event)">

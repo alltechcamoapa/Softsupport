@@ -801,6 +801,66 @@ textarea,
     margin-top: var(--spacing-lg);
 }
 
+/* ========== REPORT CARDS ENHANCEMENTS ========== */
+.report-card {
+    transition: all var(--transition-fast);
+    border: 1px solid var(--border-color);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.report-card.clickable-card {
+    cursor: pointer;
+}
+
+.report-card.clickable-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--color-primary-300);
+}
+
+.report-card__header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
+}
+
+.report-card__icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--border-radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.report-card__title {
+    font-weight: var(--font-weight-bold);
+    color: var(--text-primary);
+    font-size: var(--font-size-md);
+}
+
+.report-card__desc {
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+    margin-bottom: var(--spacing-md);
+    flex: 1;
+    line-height: 1.4;
+}
+
+.report-card__footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: auto;
+}
+
+[data-theme="dark"] .report-card.clickable-card:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
 .repair-history-header {
     display: flex;
     align-items: center;

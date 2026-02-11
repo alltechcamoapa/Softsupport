@@ -50,7 +50,7 @@ const VisitasModule = (() => {
                       onchange="VisitasModule.handleClienteFilter(this.value)">
                 <option value="all">Todos los clientes</option>
                 ${clientes.map(c => `
-                  <option value="${c.clienteId}" ${filterState.clienteId === c.clienteId ? 'selected' : ''}>
+                  <option value="${c.id}" ${filterState.clienteId === c.id ? 'selected' : ''}>
                     ${c.empresa}
                   </option>
                 `).join('')}
@@ -156,9 +156,11 @@ const VisitasModule = (() => {
                   </div>
                 </td>
                 <td>
-                  ${visita.contratoId ?
-          `<span class="badge badge--success">${visita.contratoId}</span>` :
-          `<span class="badge badge--warning">Eventual</span>`}
+                  ${(() => {
+          if (!visita.contratoId) return `<span class="badge badge--warning">Eventual</span>`;
+          const contrato = DataService.getContratoById(visita.contratoId);
+          return `<span class="badge badge--success">${contrato?.contratoId || 'Sin N°'}</span>`;
+        })()}
                 </td>
                 <td>
                   ${visita.costoServicio > 0 ?
@@ -221,7 +223,18 @@ const VisitasModule = (() => {
   const renderFormModal = (visita = null) => {
     const isEdit = visita !== null;
     const clientes = DataService.getClientesSync();
-    const tecnicos = ['Técnico Juan', 'Técnico María', 'Técnico Carlos'];
+
+    // Obtener técnicos dinámicamente
+    const allUsers = DataService.getUsersSync() || [];
+    const tecnicos = allUsers
+      .filter(u => u.role === 'Tecnico' || u.role === 'Técnico' || u.role === 'Instalador')
+      .map(u => ({ id: u.id, name: u.name || u.username }));
+
+    // Fallback si no hay técnicos creados
+    if (tecnicos.length === 0) {
+      // No podemos empujar un string aquí si esperamos objetos
+    }
+
     const selectedClienteId = visita?.clienteId || '';
     const equiposCliente = selectedClienteId ? DataService.getEquiposByCliente(selectedClienteId) : [];
     const contratosCliente = selectedClienteId ? DataService.getContratosByCliente(selectedClienteId).filter(c => c.estadoContrato === 'Activo') : [];
@@ -242,7 +255,7 @@ const VisitasModule = (() => {
                 <select name="clienteId" class="form-select" required onchange="VisitasModule.onClienteChange(this.value)">
                   <option value="">Seleccionar cliente...</option>
                   ${clientes.map(c => `
-                    <option value="${c.clienteId}" ${visita?.clienteId === c.clienteId ? 'selected' : ''}>
+                    <option value="${c.id}" ${visita?.clienteId === c.id || visita?.clienteId === c.clienteId ? 'selected' : ''}>
                       ${c.empresa} - ${c.nombreCliente}
                     </option>
                   `).join('')}
@@ -253,8 +266,8 @@ const VisitasModule = (() => {
                 <select name="contratoId" class="form-select" id="contratoSelect">
                   <option value="">Sin contrato (Eventual)</option>
                   ${contratosCliente.map(c => `
-                    <option value="${c.contratoId}" ${visita?.contratoId === c.contratoId ? 'selected' : ''}>
-                      ${c.contratoId} - ${c.tipoContrato}
+                    <option value="${c.id}" ${visita?.contratoId === c.id || visita?.contratoId === c.contratoId ? 'selected' : ''}>
+                      ${c.codigoContrato || c.contratoId || 'CON-???'} - ${c.tipoContrato}
                     </option>
                   `).join('')}
                 </select>
@@ -269,7 +282,7 @@ const VisitasModule = (() => {
                 <select name="equipoId" class="form-select" id="equipoSelect">
                   <option value="">Ningún equipo específico</option>
                   ${equiposCliente.map(e => `
-                    <option value="${e.equipoId}" ${visita?.equipoId === e.equipoId ? 'selected' : ''}>
+                    <option value="${e.id}" ${visita?.equipoId === e.id || visita?.equipoId === e.equipoId ? 'selected' : ''}>
                       ${e.nombreEquipo} - ${e.marca} ${e.modelo}
                     </option>
                   `).join('')}
@@ -294,24 +307,18 @@ const VisitasModule = (() => {
               <div class="form-group">
                 <label class="form-label form-label--required">Técnico Asignado</label>
                 <select name="usuarioSoporte" class="form-select" required>
+                  <option value="">Seleccionar técnico...</option>
                   ${tecnicos.map(t => `
-                    <option value="${t}" ${visita?.usuarioSoporte === t ? 'selected' : ''}>${t}</option>
+                    <option value="${t.id}" ${visita?.usuarioSoporte === t.id ? 'selected' : ''}>${t.name}</option>
                   `).join('')}
                 </select>
               </div>
             </div>
 
-            <div class="form-row">
-              <div class="form-group">
+            <div class="form-group">
                 <label class="form-label form-label--required">Fecha/Hora Inicio</label>
                 <input type="datetime-local" name="fechaInicio" class="form-input" 
-                       value="${visita?.fechaInicio ? visita.fechaInicio.slice(0, 16) : ''}" required>
-              </div>
-              <div class="form-group">
-                <label class="form-label form-label--required">Fecha/Hora Fin</label>
-                <input type="datetime-local" name="fechaFin" class="form-input" 
-                       value="${visita?.fechaFin ? visita.fechaFin.slice(0, 16) : ''}" required>
-              </div>
+                        value="${visita?.fechaInicio ? visita.fechaInicio.slice(0, 16) : ''}" required>
             </div>
 
             <div class="form-group">
@@ -458,7 +465,7 @@ const VisitasModule = (() => {
               <select name="clienteId" class="form-select" id="reportClienteSelect">
                 <option value="all">Todos los clientes</option>
                 ${clientes.map(c => `
-                  <option value="${c.clienteId}">${c.empresa} - ${c.nombreCliente}</option>
+                  <option value="${c.id}">${c.empresa} - ${c.nombreCliente}</option>
                 `).join('')}
               </select>
             </div>
@@ -505,32 +512,33 @@ const VisitasModule = (() => {
   const generateReport = (event) => {
     event.preventDefault();
     const formData = new FormData(event.target);
-    const filters = Object.fromEntries(formData.entries());
-    filters.incluirEquipos = formData.has('incluirEquipos');
+    const filterParams = Object.fromEntries(formData.entries());
 
-    let visitas = DataService.getVisitasSync();
+    // Usar la función de filtrado existente del DataService para consistencia
+    const filters = {
+      search: '',
+      tipo: filterParams.tipoVisita,
+      hasContrato: 'all',
+      clienteId: filterParams.clienteId
+    };
 
-    // Apply filters
-    if (filters.clienteId && filters.clienteId !== 'all') {
-      visitas = visitas.filter(v => v.clienteId === filters.clienteId);
+    let visitas = DataService.getVisitasFiltered(filters);
+
+    // Filtros de fecha adicionales
+    if (filterParams.fechaInicio) {
+      visitas = visitas.filter(v => new Date(v.fechaInicio) >= new Date(filterParams.fechaInicio));
     }
-    if (filters.fechaInicio) {
-      visitas = visitas.filter(v => new Date(v.fechaInicio) >= new Date(filters.fechaInicio));
-    }
-    if (filters.fechaFin) {
-      visitas = visitas.filter(v => new Date(v.fechaInicio) <= new Date(filters.fechaFin + 'T23:59:59'));
-    }
-    if (filters.tipoVisita && filters.tipoVisita !== 'all') {
-      visitas = visitas.filter(v => v.tipoVisita === filters.tipoVisita);
+    if (filterParams.fechaFin) {
+      visitas = visitas.filter(v => new Date(v.fechaInicio) <= new Date(filterParams.fechaFin + 'T23:59:59'));
     }
 
-    const cliente = filters.clienteId !== 'all' ? DataService.getClienteById(filters.clienteId) : null;
+    const clienteObj = filterParams.clienteId !== 'all' ? DataService.getClienteById(filterParams.clienteId) : null;
 
     const content = `
       <div class="header">
         <h1>Reporte de Visitas y Servicios</h1>
-        <p>${cliente ? `${cliente.empresa} - ${cliente.nombreCliente}` : 'Todos los clientes'}</p>
-        ${filters.fechaInicio || filters.fechaFin ? `<p>Período: ${filters.fechaInicio || 'Inicio'} - ${filters.fechaFin || 'Actual'}</p>` : ''}
+        <p>${clienteObj ? `${clienteObj.empresa} - ${clienteObj.nombreCliente}` : 'Todos los clientes'}</p>
+        ${filterParams.fechaInicio || filterParams.fechaFin ? `<p>Período: ${filterParams.fechaInicio || 'Inicio'} - ${filterParams.fechaFin || 'Actual'}</p>` : ''}
       </div>
       
       <div class="section">
@@ -765,51 +773,148 @@ const VisitasModule = (() => {
   const handleContratoFilter = (value) => { filterState.hasContrato = value; App.refreshCurrentModule(); };
   const handleClienteFilter = (value) => { filterState.clienteId = value; App.refreshCurrentModule(); };
 
-  const onClienteChange = (clienteId) => {
-    const contratos = DataService.getContratosByCliente(clienteId).filter(c => c.estadoContrato === 'Activo');
-    const equipos = DataService.getEquiposByCliente(clienteId);
+  /* ========== CLIENTE CHANGE HANDLER ========== */
+  const onClienteChange = async (clienteId) => {
+    console.log('🔄 Cambio de cliente en Visita Modal:', clienteId);
+    if (!clienteId) {
+      // Limpiar selects si no hay cliente
+      document.getElementById('contratoSelect').innerHTML = '<option value="">Sin contrato (Eventual)</option>';
+      document.getElementById('equipoSelect').innerHTML = '<option value="">Ningún equipo específico</option>';
+      return;
+    }
 
-    const contratoSelect = document.getElementById('contratoSelect');
-    contratoSelect.innerHTML = '<option value="">Sin contrato (Eventual)</option>' +
-      contratos.map(c => `<option value="${c.contratoId}">${c.contratoId} - ${c.tipoContrato}</option>`).join('');
+    try {
+      const cliente = DataService.getClienteById(clienteId);
+      // Usar UUID para buscar relaciones
+      const uuid = cliente?.id || clienteId;
 
-    const equipoSelect = document.getElementById('equipoSelect');
-    equipoSelect.innerHTML = '<option value="">Ningún equipo específico</option>' +
-      equipos.map(e => `<option value="${e.equipoId}">${e.nombreEquipo} - ${e.marca} ${e.modelo}</option>`).join('');
+      const contratos = DataService.getContratosByCliente(uuid);
+      const equipos = DataService.getEquiposByCliente(uuid);
+
+      console.log(`📋 Encontrados ${contratos.length} contratos y ${equipos.length} equipos para cliente ${uuid}`);
+
+      // Update Contratos Select
+      const contratoSelect = document.querySelector('select[name="contratoId"]');
+      if (contratoSelect) {
+        contratoSelect.innerHTML = '<option value="">Sin contrato (Eventual)</option>' +
+          contratos.filter(c => c.estadoContrato === 'Activo').map(c =>
+            `<option value="${c.id}">${c.codigoContrato || c.contratoId || 'CON-???'} - ${c.tipoContrato || 'General'}</option>`
+          ).join('');
+      }
+
+      // Update Equipos Select
+      const equipoSelect = document.querySelector('select[name="equipoId"]');
+      if (equipoSelect) {
+        equipoSelect.innerHTML = '<option value="">Ningún equipo específico</option>' +
+          equipos.map(e =>
+            `<option value="${e.id}">${e.nombreEquipo} - ${e.marca} ${e.modelo}</option>`
+          ).join('');
+      }
+
+    } catch (error) {
+      console.error('❌ Error al cargar datos del cliente:', error);
+    }
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     const formData = new FormData(event.target);
     const data = Object.fromEntries(formData.entries());
+
+    // Normalizar datos
     data.costoServicio = parseFloat(data.costoServicio) || 0;
     data.trabajoRealizado = formData.has('trabajoRealizado');
-    data.contratoId = data.contratoId || null;
-    data.equipoId = data.equipoId || null;
 
-    if (data.visitaId) {
-      DataService.updateVisita(data.visitaId, data);
-    } else {
-      data.visitaId = 'VIS' + String(Date.now()).slice(-6);
-      DataService.createVisita(data);
+    // Si es edición, obtener la visita actual para comparar
+    const currentVisita = data.visitaId ? DataService.getVisitaById(data.visitaId) : null;
+
+    // Si se marca como completado al crear/editar y no tiene fecha fin, poner la actual
+    if (data.trabajoRealizado && !(currentVisita?.fechaFin)) {
+      data.fechaFin = new Date().toISOString();
+    } else if (!data.trabajoRealizado) {
+      data.fechaFin = null;
     }
-    closeModal();
-    App.refreshCurrentModule();
+
+    // Convertir strings vacíos a null para UUIDs
+    data.contratoId = data.contratoId && data.contratoId.trim() !== '' ? data.contratoId : null;
+    data.equipoId = data.equipoId && data.equipoId.trim() !== '' ? data.equipoId : null;
+
+    // Obtener UUID del cliente real si es necesario
+    const cliente = DataService.getClienteById(data.clienteId);
+    if (cliente) data.clienteId = cliente.id || data.clienteId;
+
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn ? submitBtn.innerHTML : 'Guardar';
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = 'Guardando...';
+    }
+
+    try {
+      if (data.visitaId && data.visitaId.toString().trim() !== '' && data.visitaId !== 'undefined') {
+        await DataService.updateVisita(data.visitaId, data);
+        if (typeof ConfigModule !== 'undefined' && ConfigModule.showToast) {
+          ConfigModule.showToast('Visita actualizada', 'success');
+        }
+      } else {
+        // Eliminar ID temporal si existe, dejar que DB genere
+        delete data.visitaId;
+        console.log('📝 Creando nueva visita:', data);
+        const result = await DataService.createVisita(data);
+        if (result && result.error) throw new Error(result.error);
+
+        if (typeof ConfigModule !== 'undefined' && ConfigModule.showToast) {
+          ConfigModule.showToast('Visita creada exitosamente', 'success');
+        }
+      }
+      closeModal();
+      App.refreshCurrentModule();
+    } catch (error) {
+      console.error('Error saving visita:', error);
+      alert('Error al guardar: ' + (error.message || 'Error desconocido'));
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+      }
+    }
   };
 
-  const completarVisita = (id) => {
-    DataService.updateVisita(id, { trabajoRealizado: true });
-    App.refreshCurrentModule();
+  const completarVisita = async (id) => {
+    if (!confirm('¿Estás seguro de marcar esta visita como completada? Se registrará la hora actual como finalización.')) return;
+
+    try {
+      const now = new Date().toISOString();
+      await DataService.updateVisita(id, {
+        trabajoRealizado: true,
+        fechaFin: now
+      });
+
+      if (typeof ConfigModule !== 'undefined' && ConfigModule.showToast) {
+        ConfigModule.showToast('Visita finalizada correctamente', 'success');
+      }
+      App.refreshCurrentModule();
+    } catch (error) {
+      console.error('Error al completar visita:', error);
+      alert('Error: ' + error.message);
+    }
   };
 
   const deleteVisita = (id) => {
     if (confirm('¿Estás seguro de eliminar esta visita?')) {
-      if (DataService.deleteVisita(id)) {
-        ConfigModule.showToast('Visita eliminada', 'success');
-        App.refreshCurrentModule();
-      } else {
-        alert('No se pudo eliminar la visita');
-      }
+      DataService.deleteVisita(id).then(success => {
+        if (success) {
+          if (typeof ConfigModule !== 'undefined' && ConfigModule.showToast) {
+            ConfigModule.showToast('Visita eliminada', 'success');
+          }
+          App.refreshCurrentModule();
+        } else {
+          alert('No se pudo eliminar la visita');
+        }
+      }).catch(err => {
+        console.error('Error al eliminar visita:', err);
+        alert('Error: ' + err.message);
+      });
     }
   };
 

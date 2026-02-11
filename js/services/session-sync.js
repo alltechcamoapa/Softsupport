@@ -14,7 +14,7 @@ const SessionSync = (() => {
      */
     const checkAndSync = () => {
         return new Promise((resolve) => {
-            console.log('🔍 SessionSync: Verificando sesión...');
+            // console.log('🔍 SessionSync: Verificando sesión...');
 
             // Verificar si estamos en protocolo file:// (local)
             if (window.location.protocol === 'file:') {
@@ -47,8 +47,8 @@ const SessionSync = (() => {
                         clearTimeout(timeoutId);
                         const stateIsAuthenticated = State.get('isAuthenticated');
 
-                        console.log('📊 Sesión Supabase:', hasSupabaseSession);
-                        console.log('📊 State isAuthenticated:', stateIsAuthenticated);
+                        // console.log('📊 Sesión Supabase:', hasSupabaseSession);
+                        // console.log('📊 State isAuthenticated:', stateIsAuthenticated);
 
                         // Caso 1: State dice logueado pero Supabase no tiene sesión
                         if (stateIsAuthenticated && !hasSupabaseSession) {
@@ -60,7 +60,7 @@ const SessionSync = (() => {
 
                         // Caso 2: Supabase tiene sesión pero State no
                         if (hasSupabaseSession && !stateIsAuthenticated) {
-                            console.log('✅ Restaurando sesión desde Supabase...');
+                            // console.log('✅ Restaurando sesión desde Supabase...');
 
                             getCurrentProfile()
                                 .then(profile => {
@@ -74,7 +74,7 @@ const SessionSync = (() => {
                                             role_id: profile.role_id
                                         };
                                         State.login(user);
-                                        console.log('✅ Usuario restaurado:', user.name);
+                                        // console.log('✅ Usuario restaurado:', user.name);
                                     } else {
                                         console.warn('⚠️ Sesión sin perfil - Cerrando sesión');
                                         safeSignOut();
@@ -93,13 +93,13 @@ const SessionSync = (() => {
 
                         // Caso 3: Ambos sincronizados
                         if (hasSupabaseSession && stateIsAuthenticated) {
-                            console.log('✅ Sesión sincronizada correctamente');
+                            // console.log('✅ Sesión sincronizada correctamente');
                             resolve();
                             return;
                         }
 
                         // Caso 4: Ambos deslogueados (normal - mostrará login)
-                        console.log('ℹ️ Sin sesión activa - Mostrando login');
+                        // console.log('ℹ️ Sin sesión activa - Mostrando login');
                         resolve();
                     })
                     .catch(error => {

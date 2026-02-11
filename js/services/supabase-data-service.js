@@ -14,24 +14,61 @@ const SupabaseDataService = (() => {
             console.error('❌ No se pudo inicializar Supabase');
             return false;
         }
-        console.log('✅ SupabaseDataService initialized');
+        // console.log('✅ SupabaseDataService initialized');
         return true;
     };
 
     // ========== HELPER PARA GENERAR CÓDIGOS ==========
-    const generateCode = async (tableName) => {
+    const generateCode = async (tableName, prefix = '', padding = 5, column = null) => {
         if (!client) return null;
 
-        const { data, error } = await client.rpc('generar_codigo', {
-            p_nombre_secuencia: tableName
-        });
-
-        if (error) {
-            console.error('Error generating code:', error);
-            return null;
+        // Determinar columna por defecto si no se provee
+        if (!column) {
+            if (tableName === 'clientes') column = 'codigo_cliente';
+            else if (tableName === 'contratos') column = 'codigo_contrato';
+            else if (tableName === 'visitas') column = 'codigo_visita';
+            else if (tableName === 'productos') column = 'codigo';
+            else column = 'codigo';
         }
 
-        return data;
+        try {
+            // Intentar obtener el último registro para esta secuencia/tabla
+            let query = client
+                .from(tableName)
+                .select(column)
+                .order(column, { ascending: false })
+                .limit(1);
+
+            if (prefix) {
+                query = query.like(column, `${prefix}%`);
+            }
+
+            const { data, error } = await query;
+
+            if (error) {
+                console.error(`Error querying max code for ${tableName}:`, error);
+                throw error;
+            }
+
+            let nextNumber = 1;
+            if (data && data.length > 0) {
+                const lastCode = data[0][column];
+                if (lastCode) {
+                    // Extraer los dígitos del final del string
+                    const matches = String(lastCode).match(/\d+$/);
+                    if (matches) {
+                        nextNumber = parseInt(matches[0]) + 1;
+                    }
+                }
+            }
+
+            // Formatear el nuevo código
+            return prefix + String(nextNumber).padStart(padding, '0');
+        } catch (error) {
+            console.error(`Error generating sequential code for ${tableName}:`, error);
+            // Fallback: usar timestamp si todo falla para evitar errores de creación
+            return (prefix || 'TEMP-') + Date.now().toString().slice(-padding);
+        }
     };
 
     // ========== CLIENTES ==========
@@ -97,17 +134,9 @@ const SupabaseDataService = (() => {
     const createCliente = async (clienteData) => {
         if (!client) return { error: 'Not initialized' };
 
-        // Generar código si no existe
+        // Generar código secuencial si no existe (Formato: CLI-0001)
         if (!clienteData.codigo_cliente) {
-            // Intentar generar código vía RPC
-            let codigo = await generateCode('clientes');
-
-            // Fallback: generar código local si RPC falla
-            if (!codigo) {
-                console.warn('⚠️ RPC generateCode falló, usando fallback local');
-                codigo = 'CLI' + Date.now().toString().slice(-6);
-            }
-
+            const codigo = await generateCode('clientes', 'CLI-', 4, 'codigo_cliente');
             clienteData.codigo_cliente = codigo;
         }
 
@@ -243,15 +272,9 @@ const SupabaseDataService = (() => {
     const createContrato = async (contratoData) => {
         if (!client) return { error: 'Not initialized' };
 
-        // Generar código si no existe
+        // Generar código secuencial si no existe (Formato: CTTO-0001)
         if (!contratoData.codigo_contrato) {
-            let codigo = await generateCode('contratos');
-
-            // Fallback (RPC falló)
-            if (!codigo) {
-                console.warn('⚠️ RPC generateCode falló para contratos, usando fallback local');
-                codigo = 'CON' + Date.now().toString().slice(-6);
-            }
+            const codigo = await generateCode('contratos', 'CTTO-', 4, 'codigo_contrato');
             contratoData.codigo_contrato = codigo;
         }
 
@@ -465,7 +488,7 @@ const SupabaseDataService = (() => {
                 *,
                 cliente:clientes(*),
                 contrato:contratos(*),
-                tecnico:profiles(*)
+                tecnico:profiles!tecnico_id(*)
             `)
             .order('fecha_inicio', { ascending: false });
 
@@ -475,6 +498,97 @@ const SupabaseDataService = (() => {
         }
 
         return data || [];
+    };
+
+    const createVisita = async (visitaData) => {
+        if (!client) return { error: 'Not initialized' };
+
+        // 0. Generar codigo si no existe (Formato: VIS-0001)
+        if (!visitaData.codigo_visita) {
+            const codigo = await generateCode('visitas', 'VIS-', 4, 'codigo_visita');
+            visitaData.codigo_visita = codigo;
+        }
+
+        // 1. Map camelCase to snake_case for DB
+        const dbData = {
+            codigo_visita: visitaData.codigo_visita,
+            cliente_id: visitaData.clienteId,
+            contrato_id: visitaData.contratoId,
+            equipo_id: visitaData.equipoId,
+            tipo_visita: visitaData.tipoVisita,
+            usuario_soporte: visitaData.usuarioSoporte,
+            tecnico_id: visitaData.usuarioSoporte, // Mapear usuarioSoporte a tecnico_id por constraint
+            fecha_inicio: visitaData.fechaInicio,
+            fecha_fin: visitaData.fechaFin,
+            descripcion_trabajo: visitaData.descripcionTrabajo,
+            costo_servicio: visitaData.costoServicio,
+            moneda: visitaData.moneda,
+            trabajo_realizado: visitaData.trabajoRealizado
+        };
+
+        // 2. Insert into 'visitas' table
+        const { data, error } = await client
+            .from('visitas')
+            .insert([dbData])
+            .select()
+            .single();
+
+        if (error) {
+            return { error: handleSupabaseError(error, 'createVisita') };
+        }
+
+        return { data, success: true };
+    };
+
+    const updateVisita = async (id, updates) => {
+        if (!client) return { error: 'Not initialized' };
+
+        // 1. Map updates to snake_case
+        const dbUpdates = {};
+        if (updates.clienteId) dbUpdates.cliente_id = updates.clienteId;
+        if (updates.contratoId !== undefined) dbUpdates.contrato_id = updates.contratoId;
+        if (updates.equipoId !== undefined) dbUpdates.equipo_id = updates.equipoId;
+
+        if (updates.tipoVisita) dbUpdates.tipo_visita = updates.tipoVisita;
+        if (updates.usuarioSoporte) {
+            dbUpdates.usuario_soporte = updates.usuarioSoporte;
+            dbUpdates.tecnico_id = updates.usuarioSoporte;
+        }
+        if (updates.fechaInicio) dbUpdates.fecha_inicio = updates.fechaInicio;
+        if (updates.fechaFin) dbUpdates.fecha_fin = updates.fechaFin;
+        if (updates.descripcionTrabajo) dbUpdates.descripcion_trabajo = updates.descripcionTrabajo;
+        if (updates.costoServicio !== undefined) dbUpdates.costo_servicio = updates.costoServicio;
+        if (updates.moneda) dbUpdates.moneda = updates.moneda;
+        if (updates.trabajoRealizado !== undefined) dbUpdates.trabajo_realizado = updates.trabajoRealizado;
+
+        // 2. Update record
+        const { data, error } = await client
+            .from('visitas')
+            .update(dbUpdates)
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) {
+            return { error: handleSupabaseError(error, 'updateVisita') };
+        }
+
+        return { data, success: true };
+    };
+
+    const deleteVisita = async (id) => {
+        if (!client) return { error: 'Not initialized' };
+
+        const { error } = await client
+            .from('visitas')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            return { error: handleSupabaseError(error, 'deleteVisita') };
+        }
+
+        return { success: true };
     };
 
     // ========== DASHBOARD STATS ==========
@@ -586,14 +700,25 @@ const SupabaseDataService = (() => {
                 .single();
 
             if (roleData) {
-                // Actualizar profiles con rol y campos laborales
-                await client
+                // Actualizar o Crear profiles con rol y campos laborales
+                // Usamos UPSERT para manejar caso donde el trigger falló o no existe
+                const profilePayload = {
+                    id: data.user.id,
+                    username: userData.username,
+                    full_name: userData.name,
+                    role_id: roleData.id,
+                    email: userData.email,
+                    is_active: true,
+                    // allowed_modules: userData.allowedModules // Si existe en schema
+                };
+
+                const { error: profileError } = await client
                     .from('profiles')
-                    .update({
-                        role_id: roleData.id,
-                        email: userData.email
-                    })
-                    .eq('id', data.user.id);
+                    .upsert(profilePayload, { onConflict: 'id' });
+
+                if (profileError) {
+                    console.error('⚠️ Error al upsert perfil:', profileError);
+                }
             }
 
             return { success: true, user: data.user, session: data.session };
@@ -637,13 +762,7 @@ const SupabaseDataService = (() => {
             return [];
         }
 
-        // DEBUG: Imprimir estructura para verificar nombre de columnas
-        if (data && data.length > 0) {
-            console.group('📦 DEBUG SCHEMA PRODUCTOS');
-            console.log('Columnas disponibles:', Object.keys(data[0]));
-            console.log('Ejemplo de registro:', data[0]);
-            console.groupEnd();
-        }
+
 
         return data || [];
     };
@@ -668,84 +787,111 @@ const SupabaseDataService = (() => {
     const createProducto = async (productoData) => {
         if (!client) return { error: 'Not initialized' };
 
-        // Generar código si no existe
+        // Generar código secuencial si no existe (Formato: PO-0001 para Producto, SO-0001 para Servicio)
         if (!productoData.codigo) {
-            productoData.codigo = 'PROD' + Date.now().toString().slice(-6);
+            const prefix = productoData.tipo === 'Servicio' ? 'SO-' : 'PO-';
+            const codigo = await generateCode('productos', prefix, 4, 'codigo');
+            productoData.codigo = codigo;
         }
 
         const user = await getCurrentUser();
-        // Solo agregar created_by si no viene en los datos
         if (user && !productoData.created_by) {
             productoData.created_by = user.id;
         }
 
         console.log('📤 Creando producto con datos:', productoData);
 
-        let result = await client
+        // Mapear directamente a las columnas reales del schema
+        const dataToInsert = {
+            codigo: productoData.codigo,
+            nombre: productoData.nombre,
+            descripcion: productoData.descripcion || null,
+            tipo: productoData.tipo || 'Producto',
+            categoria: productoData.categoria || null,
+            subcategoria: productoData.subcategoria || null,
+            marca: productoData.marca || null,
+            modelo: productoData.modelo || null,
+            unidad_medida: productoData.unidadMedida || productoData.unidad_medida || 'Unidad',
+            precio_costo: parseFloat(productoData.precioCosto || productoData.precio_costo) || 0,
+            precio_venta: parseFloat(productoData.precioVenta || productoData.precio_venta || productoData.precio) || 0,
+            moneda: productoData.moneda || 'USD',
+            stock_actual: parseInt(productoData.stockActual || productoData.stock_actual) || 0,
+            stock_minimo: parseInt(productoData.stockMinimo || productoData.stock_minimo) || 0,
+            proveedor: productoData.proveedor || null,
+            tiempo_entrega_dias: productoData.tiempoEntregaDias || productoData.tiempo_entrega_dias || null,
+            garantia_meses: productoData.garantiaMeses || productoData.garantia_meses || null,
+            imagen_url: productoData.imagenUrl || productoData.imagen_url || null,
+            estado: productoData.estado || 'Activo',
+            es_inventariable: productoData.esInventariable ?? productoData.es_inventariable ?? true,
+            impuesto_iva: parseFloat(productoData.impuestoIva || productoData.impuesto_iva) || 0,
+            notas: productoData.notas || null,
+            created_by: productoData.created_by || null
+        };
+
+        const { data, error } = await client
             .from('productos')
-            .insert([productoData])
+            .insert([dataToInsert])
             .select()
             .single();
 
-        // Fallback para columna 'precio' -> 'precio_unitario'
-        if (result.error && result.error.message && result.error.message.includes("Could not find the 'precio' column")) {
-            console.warn("⚠️ Columna 'precio' no encontrada, reintentando con 'precio_unitario'...");
-            const fallbackData = { ...productoData, precio_unitario: productoData.precio };
-            delete fallbackData.precio;
-
-            result = await client
-                .from('productos')
-                .insert([fallbackData])
-                .select()
-                .single();
+        if (error) {
+            console.error('❌ Error creando producto:', error);
+            return { error: handleSupabaseError(error, 'createProducto') };
         }
 
-        if (result.error) {
-            console.error('❌ Error en createProducto:', result.error);
-            return { error: handleSupabaseError(result.error, 'createProducto') };
-        }
-
-        console.log('✅ Producto creado:', result.data);
-        return { data: result.data, success: true };
+        console.log('✅ Producto creado:', data);
+        return { data, success: true };
     };
 
     const updateProducto = async (id, updates) => {
         if (!client) return { error: 'Not initialized' };
 
-        const updateData = { ...updates, updated_at: new Date().toISOString() };
+        // Mapear campos de frontend a columnas reales del schema
+        const dataToUpdate = { updated_at: new Date().toISOString() };
 
-        // No enviar 'precio' si vamos a probar fallback, pero lo necesitamos para el fallback
+        if (updates.nombre !== undefined) dataToUpdate.nombre = updates.nombre;
+        if (updates.descripcion !== undefined) dataToUpdate.descripcion = updates.descripcion;
+        if (updates.tipo !== undefined) dataToUpdate.tipo = updates.tipo;
+        if (updates.codigo !== undefined) dataToUpdate.codigo = updates.codigo;
+        if (updates.categoria !== undefined) dataToUpdate.categoria = updates.categoria;
+        if (updates.subcategoria !== undefined) dataToUpdate.subcategoria = updates.subcategoria;
+        if (updates.marca !== undefined) dataToUpdate.marca = updates.marca;
+        if (updates.modelo !== undefined) dataToUpdate.modelo = updates.modelo;
+        if (updates.estado !== undefined) dataToUpdate.estado = updates.estado;
+        if (updates.notas !== undefined) dataToUpdate.notas = updates.notas;
+        if (updates.moneda !== undefined) dataToUpdate.moneda = updates.moneda;
+        if (updates.proveedor !== undefined) dataToUpdate.proveedor = updates.proveedor;
 
-        let result = await client
+        // Mapeo de precio: el UI envía "precio", la DB usa "precio_venta"
+        if (updates.precio !== undefined) dataToUpdate.precio_venta = parseFloat(updates.precio) || 0;
+        if (updates.precioVenta !== undefined) dataToUpdate.precio_venta = parseFloat(updates.precioVenta) || 0;
+        if (updates.precio_venta !== undefined) dataToUpdate.precio_venta = parseFloat(updates.precio_venta) || 0;
+        if (updates.precioCosto !== undefined) dataToUpdate.precio_costo = parseFloat(updates.precioCosto) || 0;
+        if (updates.precio_costo !== undefined) dataToUpdate.precio_costo = parseFloat(updates.precio_costo) || 0;
+
+        // Campos numéricos opcionales
+        if (updates.stockActual !== undefined || updates.stock_actual !== undefined) {
+            dataToUpdate.stock_actual = parseInt(updates.stockActual || updates.stock_actual) || 0;
+        }
+        if (updates.stockMinimo !== undefined || updates.stock_minimo !== undefined) {
+            dataToUpdate.stock_minimo = parseInt(updates.stockMinimo || updates.stock_minimo) || 0;
+        }
+        if (updates.unidadMedida !== undefined || updates.unidad_medida !== undefined) {
+            dataToUpdate.unidad_medida = updates.unidadMedida || updates.unidad_medida;
+        }
+        if (updates.impuestoIva !== undefined || updates.impuesto_iva !== undefined) {
+            dataToUpdate.impuesto_iva = parseFloat(updates.impuestoIva || updates.impuesto_iva) || 0;
+        }
+
+        const { data, error } = await client
             .from('productos')
-            .update(updateData)
+            .update(dataToUpdate)
             .eq('id', id)
             .select()
             .single();
 
-        // Fallback para columna 'precio' -> 'precio_unitario'
-        if (result.error && result.error.message && result.error.message.includes("Could not find the 'precio' column")) {
-            console.warn("⚠️ Columna 'precio' no encontrada al actualizar, reintentando con 'precio_unitario'...");
-
-            // Si updates tiene precio, crear nuevo objeto
-            if (updateData.precio !== undefined) {
-                const fallbackData = { ...updateData, precio_unitario: updateData.precio };
-                delete fallbackData.precio;
-
-                result = await client
-                    .from('productos')
-                    .update(fallbackData)
-                    .eq('id', id)
-                    .select()
-                    .single();
-            }
-        }
-
-        if (result.error) {
-            return { error: handleSupabaseError(result.error, 'updateProducto') };
-        }
-
-        return { data: result.data, success: true };
+        if (error) return { error: handleSupabaseError(error, 'updateProducto') };
+        return { data, success: true };
     };
 
     const deleteProducto = async (id) => {
@@ -1308,6 +1454,326 @@ const SupabaseDataService = (() => {
         return { success: true, data };
     };
 
+    const getRecentNominas = async (limit = 50) => {
+        if (!client) return [];
+        const { data, error } = await client
+            .from('nominas')
+            .select(`
+                *,
+                empleado:empleados(nombre, cargo)
+            `)
+            .order('periodo_fin', { ascending: false })
+            .limit(limit);
+
+        if (error) {
+            console.error('Error fetching recent nominas:', error);
+            return [];
+        }
+        return data || [];
+    };
+
+    // ========== PRESTACIONES: AUSENCIAS ==========
+    const getAusenciasByEmpleado = async (empleadoId) => {
+        if (!client) return [];
+        const { data, error } = await client
+            .from('ausencias')
+            .select('*')
+            .eq('empleado_id', empleadoId)
+            .order('fecha_inicio', { ascending: false });
+
+        if (error) {
+            console.error('Error fetching ausencias:', error);
+            return [];
+        }
+        return data || [];
+    };
+
+    const getAllAusencias = async (limit = 50) => {
+        if (!client) return [];
+        const { data, error } = await client
+            .from('ausencias')
+            .select(`
+                *,
+                empleado:empleados(nombre, cargo)
+            `)
+            .order('fecha_inicio', { ascending: false })
+            .limit(limit);
+
+        if (error) {
+            console.error('Error fetching all ausencias:', error);
+            return [];
+        }
+        return data || [];
+    };
+
+    const createAusencia = async (ausenciaData) => {
+        if (!client) return { error: 'Not initialized' };
+
+        const { data, error } = await client
+            .from('ausencias')
+            .insert([{
+                empleado_id: ausenciaData.empleadoId,
+                fecha_inicio: ausenciaData.fechaInicio,
+                fecha_fin: ausenciaData.fechaFin,
+                dias: ausenciaData.dias,
+                tipo_descuento: ausenciaData.tipoDescuento,
+                motivo: ausenciaData.motivo || null,
+                observaciones: ausenciaData.observaciones || null
+            }])
+            .select()
+            .single();
+
+        if (error) return { error: handleSupabaseError(error, 'createAusencia') };
+
+        // Si se descuenta de vacaciones, actualizar contador
+        if (ausenciaData.tipoDescuento === 'vacaciones') {
+            const emp = await getEmpleadoById(ausenciaData.empleadoId);
+            if (emp) {
+                await updateEmpleado(emp.id, {
+                    vacacionesTomadas: (emp.vacaciones_tomadas || 0) + ausenciaData.dias
+                });
+            }
+        }
+
+        return { success: true, data };
+    };
+
+    const deleteAusencia = async (id) => {
+        if (!client) return { error: 'Not initialized' };
+
+        // Obtener primero para revertir días si era de vacaciones
+        const { data: ausencia } = await client
+            .from('ausencias')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        const { error } = await client
+            .from('ausencias')
+            .delete()
+            .eq('id', id);
+
+        if (error) return { error: handleSupabaseError(error, 'deleteAusencia') };
+
+        // Revertir días de vacaciones si aplica
+        if (ausencia && ausencia.tipo_descuento === 'vacaciones') {
+            const emp = await getEmpleadoById(ausencia.empleado_id);
+            if (emp) {
+                await updateEmpleado(emp.id, {
+                    vacacionesTomadas: Math.max(0, (emp.vacaciones_tomadas || 0) - ausencia.dias)
+                });
+            }
+        }
+
+        return { success: true };
+    };
+
+    // ========== ALL NOMINAS (for history) ==========
+    const getAllNominas = async (limit = 100) => {
+        if (!client) return [];
+        const { data, error } = await client
+            .from('nominas')
+            .select(`
+                *,
+                empleado:empleados(nombre, cargo)
+            `)
+            .order('created_at', { ascending: false })
+            .limit(limit);
+
+        if (error) {
+            console.error('Error fetching all nominas:', error);
+            return [];
+        }
+        return data || [];
+    };
+
+    // ========== PUBLIC API ==========
+    // ========== SOFTWARE ==========
+    const getSoftwareSync = async () => {
+        if (!client) return [];
+
+        const { data, error } = await client
+            .from('software')
+            .select(`
+                *,
+                cliente:clientes(id, nombre_cliente, empresa)
+            `)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('Error fetching software:', error);
+            return [];
+        }
+
+        return data || [];
+    };
+
+    const getSoftwareFiltered = async (filter) => {
+        if (!client) return [];
+
+        let query = client
+            .from('software')
+            .select(`
+                *,
+                cliente:clientes(id, nombre_cliente, empresa)
+            `);
+
+        if (filter.search) {
+            query = query.or(`nombre_software.ilike.%${filter.search}%,numero_licencia.ilike.%${filter.search}%,numero_serie.ilike.%${filter.search}%`);
+        }
+
+        if (filter.tipo && filter.tipo !== 'all') {
+            query = query.eq('tipo_licencia', filter.tipo);
+        }
+
+        if (filter.activacion && filter.activacion !== 'all') {
+            query = query.eq('modo_activacion', filter.activacion);
+        }
+
+        query = query.order('created_at', { ascending: false });
+
+        const { data, error } = await query;
+
+        if (error) {
+            console.error('Error filtering software:', error);
+            return [];
+        }
+
+        return data || [];
+    };
+
+    const getSoftwareById = async (id) => {
+        if (!client) return null;
+
+        const { data, error } = await client
+            .from('software')
+            .select(`
+                *,
+                cliente:clientes(*)
+            `)
+            .eq('id', id)
+            .single();
+
+        if (error) {
+            console.error('Error fetching software item:', error);
+            return null;
+        }
+
+        return data;
+    };
+
+    const createSoftware = async (softwareData) => {
+        if (!client) return { error: 'Not initialized' };
+
+        // Generar código si no existe
+        if (!softwareData.codigoSoftware) {
+            // Intento básico de generación de código único
+            softwareData.codigoSoftware = 'SOFT' + Date.now().toString().slice(-6);
+        }
+
+        const user = await getCurrentUser();
+        if (user) {
+            softwareData.created_by = user.id;
+        }
+
+        // Mapear campos de frontend a columnas de DB
+        const dataToInsert = {
+            codigo_software: softwareData.codigoSoftware,
+            nombre_software: softwareData.nombreSoftware,
+            tipo_software: softwareData.tipoSoftware,
+            numero_licencia: softwareData.numeroLicencia,
+            numero_serie: softwareData.numeroSerie,
+            cliente_id: softwareData.clienteId || softwareData.cliente_id,
+            nombre_registro: softwareData.nombreRegistro,
+            tipo_licencia: softwareData.tipoLicencia,
+            modo_activacion: softwareData.modoActivacion,
+            fecha_inicio_poliza: softwareData.fechaInicioPoliza,
+            fecha_fin_poliza: softwareData.fechaFinPoliza || null,
+            created_by: softwareData.created_by
+        };
+
+        const { data, error } = await client
+            .from('software')
+            .insert([dataToInsert])
+            .select()
+            .single();
+
+        if (error) {
+            console.error('❌ Error creando software:', error);
+            return { error: handleSupabaseError(error, 'createSoftware') };
+        }
+
+        return { data, success: true };
+    };
+
+    const updateSoftware = async (id, updates) => {
+        if (!client) return { error: 'Not initialized' };
+
+        const dataToUpdate = { updated_at: new Date().toISOString() };
+
+        if (updates.nombreSoftware !== undefined) dataToUpdate.nombre_software = updates.nombreSoftware;
+        if (updates.tipoSoftware !== undefined) dataToUpdate.tipo_software = updates.tipoSoftware;
+        if (updates.numeroLicencia !== undefined) dataToUpdate.numero_licencia = updates.numeroLicencia;
+        if (updates.numeroSerie !== undefined) dataToUpdate.numero_serie = updates.numeroSerie;
+        if (updates.clienteId !== undefined) dataToUpdate.cliente_id = updates.clienteId;
+        if (updates.nombreRegistro !== undefined) dataToUpdate.nombre_registro = updates.nombreRegistro;
+        if (updates.tipoLicencia !== undefined) dataToUpdate.tipo_licencia = updates.tipoLicencia;
+        if (updates.modoActivacion !== undefined) dataToUpdate.modo_activacion = updates.modoActivacion;
+        if (updates.fechaInicioPoliza !== undefined) dataToUpdate.fecha_inicio_poliza = updates.fechaInicioPoliza;
+        if (updates.fechaFinPoliza !== undefined) dataToUpdate.fecha_fin_poliza = updates.fechaFinPoliza;
+
+        const { data, error } = await client
+            .from('software')
+            .update(dataToUpdate)
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) return { error: handleSupabaseError(error, 'updateSoftware') };
+        return { data, success: true };
+    };
+
+    const getUsersSync = async () => {
+        if (!client) return [];
+
+        const { data, error } = await client
+            .from('profiles')
+            .select(`
+                *,
+                roles (name)
+            `);
+
+        if (error) {
+            console.error('Error fetching users:', error);
+            return [];
+        }
+
+        return data.map(u => ({
+            id: u.id,
+            username: u.username,
+            name: u.full_name,
+            email: u.email,
+            role: u.roles?.name || 'Usuario',
+            role_id: u.role_id,
+            allowedModules: u.allowed_modules || [] // Si existe
+        }));
+    };
+
+    const deleteSoftware = async (id) => {
+        if (!client) return { error: 'Not initialized' };
+
+        const { error } = await client
+            .from('software')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            return { error: handleSupabaseError(error, 'deleteSoftware') };
+        }
+
+        return { success: true };
+    };
+
     // ========== PUBLIC API ==========
     return {
         // Inicialización
@@ -1319,6 +1785,7 @@ const SupabaseDataService = (() => {
         createUser, // Exportar createUser
         getCurrentUser,
         getCurrentProfile,
+        getUsersSync,
         signIn,
         signOut,
         isAuthenticated,
@@ -1342,6 +1809,14 @@ const SupabaseDataService = (() => {
         updateContrato,
         deleteContrato,
 
+        // Software
+        getSoftwareSync,
+        getSoftwareFiltered,
+        getSoftwareById,
+        createSoftware,
+        updateSoftware,
+        deleteSoftware,
+
         // Equipos
         getEquiposSync,
         getEquiposFiltered,
@@ -1352,6 +1827,9 @@ const SupabaseDataService = (() => {
 
         // Visitas
         getVisitasSync,
+        createVisita,
+        updateVisita,
+        deleteVisita,
 
         // Productos
         getProductosSync,
@@ -1393,6 +1871,14 @@ const SupabaseDataService = (() => {
 
         getNominasByEmpleado,
         createNomina,
+        getRecentNominas,
+        getAllNominas,
+
+        // Ausencias
+        getAusenciasByEmpleado,
+        getAllAusencias,
+        createAusencia,
+        deleteAusencia,
 
         // Helpers
         generateCode

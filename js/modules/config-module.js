@@ -899,54 +899,62 @@ const ConfigModule = (() => {
 
   const saveNewUser = async (event) => {
     event.preventDefault();
+    console.log('🚀 Iniciando creación de usuario...');
+
     const formData = new FormData(event.target);
     const submitBtn = event.target.querySelector('button[type="submit"]');
 
-    // Deshabilitar botón
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '⏳ Creando usuario...';
-
-    // Get selected modules
-    const selectedModules = Array.from(formData.getAll('modules'));
-
-    const username = formData.get('username').toLowerCase().replace(/\s+/g, '');
-    // Generar email automático para Supabase Auth (no visible al usuario)
-    const email = formData.get('email') || `${username}@alltech.local`;
-
-    const userData = {
-      name: formData.get('name'),
-      username: username,
-      email: email,
-      password: formData.get('password'),
-      role: formData.get('role'),
-      allowedModules: selectedModules,
-      // Campos laborales
-      fechaAlta: formData.get('fechaAlta') || null,
-      tipoSalario: formData.get('tipoSalario') || null,
-      salarioTotal: formData.get('salarioTotal') ? parseFloat(formData.get('salarioTotal')) : null,
-      tiempoContrato: formData.get('tiempoContrato') ? parseInt(formData.get('tiempoContrato')) : null
-    };
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '⏳ Creando...';
+    }
 
     try {
-      // Crear usuario en Supabase Auth + Profile via DataService
+      // Get selected modules
+      const selectedModules = Array.from(formData.getAll('modules'));
+      const username = formData.get('username').toLowerCase().replace(/\s+/g, '');
+      const email = formData.get('email') || `${username}@alltech.com`;
+
+      const userData = {
+        name: formData.get('name'),
+        username: username,
+        email: email,
+        password: formData.get('password'),
+        role: formData.get('role'),
+        allowedModules: selectedModules,
+        fechaAlta: formData.get('fechaAlta') || null,
+        tipoSalario: formData.get('tipoSalario') || null,
+        salarioTotal: formData.get('salarioTotal') ? parseFloat(formData.get('salarioTotal')) : null,
+        tiempoContrato: formData.get('tiempoContrato') ? parseInt(formData.get('tiempoContrato')) : null
+      };
+
+      console.log('📤 Enviando datos:', userData);
+
+      // Crear usuario
       const result = await DataService.createUser(userData);
+      console.log('📥 Respuesta:', result);
 
       if (result.error) {
-        showToast(`Error al crear usuario: ${result.error}`, 'error');
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = `${Icons.plus} Crear Usuario`;
+        alert(`Error al crear usuario: ${result.error}`);
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = `${Icons.plus} Crear Usuario`;
+        }
         return;
       }
 
-      showToast('Usuario creado exitosamente', 'success');
+      alert('Usuario creado exitosamente. La sesión se actualizará.');
       closeModal();
       currentTab = 'usuarios';
       App.refreshCurrentModule();
+
     } catch (error) {
-      console.error('Error creating user:', error);
-      showToast(`Error: ${error.message}`, 'error');
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = `${Icons.plus} Crear Usuario`;
+      console.error('❌ Error crítico en saveNewUser:', error);
+      alert(`Error inesperado: ${error.message}`);
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `${Icons.plus} Crear Usuario`;
+      }
     }
   };
 

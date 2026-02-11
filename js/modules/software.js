@@ -81,7 +81,7 @@ const SoftwareModule = (() => {
         <thead class="data-table__head">
           <tr>
             <th>Software / Tipo</th>
-            <th>Licencia / Serie</th>
+            <th>Licencia Empresa / PC</th>
             <th>Registro</th>
             <th>Estado</th>
             <th>Póliza</th>
@@ -96,11 +96,11 @@ const SoftwareModule = (() => {
                 <div class="text-xs text-muted">${item.tipoSoftware || 'General'}</div>
               </td>
               <td>
-                <div style="font-size: 11px;">Lic: ${item.numeroLicencia}</div>
-                <div style="font-size: 11px; color: var(--text-muted);">SN: ${item.numeroSerie || 'N/A'}</div>
+                <div style="font-size: 11px;">Emp: ${item.numeroLicencia}</div>
+                <div style="font-size: 11px; color: var(--text-muted);">PC: ${item.numeroSerie || 'N/A'}</div>
               </td>
               <td>
-                <div class="text-sm">${item.nombreRegistro || '-'}</div>
+                <div class="text-sm">${item.cliente?.empresa || item.cliente?.nombreCliente || item.nombreRegistro || '-'}</div>
               </td>
               <td>
                 <span class="badge ${item.tipoLicencia === 'SERVIDOR' ? 'badge--primary' : 'badge--neutral'}" style="margin-right: 4px;">${item.tipoLicencia}</span>
@@ -115,7 +115,12 @@ const SoftwareModule = (() => {
                 </div>
               </td>
               <td>
-                 <div class="flex gap-xs">
+                  <div class="flex gap-xs">
+                    <button class="btn btn--ghost btn--icon btn--sm" 
+                            onclick="SoftwareModule.viewDetail('${item.id}')"
+                            title="Ver detalle">
+                      ${Icons.eye}
+                    </button>
                     ${canUpdate ? `
                     <button class="btn btn--ghost btn--icon btn--sm" 
                             onclick="SoftwareModule.openEditModal('${item.id}')"
@@ -159,6 +164,7 @@ const SoftwareModule = (() => {
 
   const renderFormModal = (software = null) => {
     const isEdit = software !== null;
+    const clientes = DataService.getClientesSync();
 
     return `
       <div class="modal-overlay open" onclick="SoftwareModule.closeModal(event)">
@@ -200,21 +206,24 @@ const SoftwareModule = (() => {
 
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label form-label--required">Número de Licencia</label>
+                <label class="form-label form-label--required">Número de Licencia Empresa</label>
                 <input type="text" name="numeroLicencia" class="form-input" value="${software?.numeroLicencia || ''}" required placeholder="XXXX-XXXX-XXXX">
               </div>
                <div class="form-group">
-                <label class="form-label">Número de Serie</label>
+                <label class="form-label">Número Licencia PC</label>
                 <input type="text" name="numeroSerie" class="form-input" value="${software?.numeroSerie || ''}" placeholder="SN-00000">
               </div>
             </div>
 
             <div class="form-group">
-              <label class="form-label">Nombre de Registro (Cliente/Organización)</label>
-              <input type="text" name="nombreRegistro" class="form-input" value="${software?.nombreRegistro || ''}" placeholder="Ej: Empresa S.A." list="registrosList">
-              <datalist id="registrosList">
-                ${DataService.getSoftwareUniqueRegistros().map(r => `<option value="${r}">`).join('')}
-              </datalist>
+              <label class="form-label form-label--required">Cliente / Organización</label>
+              <select name="clienteId" class="form-select" required>
+                 <option value="">Seleccione un cliente...</option>
+                 ${clientes.map(c => `
+                    <option value="${c.id}" ${software?.clienteId === c.id ? 'selected' : ''}>
+                        ${c.empresa || c.nombreCliente}
+                    </option>`).join('')}
+              </select>
             </div>
             
             <div class="form-row">
@@ -233,6 +242,76 @@ const SoftwareModule = (() => {
               <button type="submit" class="btn btn--primary">${isEdit ? 'Guardar Cambios' : 'Registrar Licencia'}</button>
             </div>
           </form>
+        </div>
+      </div>
+    `;
+  };
+
+  const renderDetailModal = (software) => {
+    const cliente = DataService.getClienteById(software.cliente_id || software.clienteId);
+
+    return `
+      <div class="modal-overlay open" onclick="SoftwareModule.closeModal(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+          <div class="modal__header">
+            <div>
+              <h3 class="modal__title">Detalle de Licencia</h3>
+              <p class="text-sm text-muted">${software.nombreSoftware}</p>
+            </div>
+            <button class="modal__close" onclick="SoftwareModule.closeModal()">${Icons.x}</button>
+          </div>
+          <div class="modal__body">
+            <div class="detail-grid">
+              <div class="detail-item">
+                <div class="detail-item__label">Software</div>
+                <div class="detail-item__value">${software.nombreSoftware}</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-item__label">Tipo</div>
+                <div class="detail-item__value">${software.tipoSoftware || 'General'}</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-item__label">Tipo de Licencia</div>
+                <div class="detail-item__value">
+                  <span class="badge ${software.tipoLicencia === 'SERVIDOR' ? 'badge--primary' : 'badge--neutral'}">${software.tipoLicencia}</span>
+                </div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-item__label">Modo Activación</div>
+                <div class="detail-item__value">
+                   <span class="badge ${software.modoActivacion === 'ORIGINAL' ? 'badge--success' : 'badge--warning'}">
+                    ${software.modoActivacion}
+                  </span>
+                </div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-item__label">Licencia Empresa</div>
+                <div class="detail-item__value font-mono" style="word-break: break-all;">${software.numeroLicencia}</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-item__label">Licencia PC / Serie</div>
+                <div class="detail-item__value font-mono">${software.numeroSerie || 'N/A'}</div>
+              </div>
+              <div class="detail-item detail-item--full">
+                <div class="detail-item__label">Cliente / Organización</div>
+                <div class="detail-item__value">${cliente?.empresa || cliente?.nombreCliente || 'No asignado'}</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-item__label">Inicio Póliza</div>
+                <div class="detail-item__value">${new Date(software.fechaInicioPoliza).toLocaleDateString('es-NI')}</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-item__label">Fin Póliza</div>
+                <div class="detail-item__value ${new Date(software.fechaFinPoliza) < new Date() ? 'text-error' : 'text-success'}">
+                  ${software.fechaFinPoliza ? new Date(software.fechaFinPoliza).toLocaleDateString('es-NI') : 'N/A'}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal__footer">
+            <button class="btn btn--secondary" onclick="SoftwareModule.closeModal()">Cerrar</button>
+            <button class="btn btn--primary" onclick="SoftwareModule.openEditModal('${software.id}')">${Icons.edit} Editar</button>
+          </div>
         </div>
       </div>
     `;
@@ -289,8 +368,8 @@ const SoftwareModule = (() => {
             <tr>
               <th>Software</th>
               <th>Tipo</th>
-              <th>Licencia</th>
-              <th>Serie</th>
+              <th>Licencia Empresa</th>
+              <th>Licencia PC</th>
               <th>Activación</th>
               <th>Vencimiento Póliza</th>
             </tr>
@@ -361,18 +440,35 @@ const SoftwareModule = (() => {
   const handleTipoFilter = (value) => { filterState.tipo = value; App.refreshCurrentModule(); };
   const handleActivacionFilter = (value) => { filterState.activacion = value; App.refreshCurrentModule(); };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     const formData = new FormData(event.target);
     const data = Object.fromEntries(formData.entries());
 
-    if (data.id) {
-      DataService.updateSoftware(data.id, data);
-    } else {
-      DataService.createSoftware(data);
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="loader"></span> Guardando...';
+
+    try {
+      if (data.id) {
+        await DataService.updateSoftware(data.id, data);
+        // alert('Licencia actualizada correctamente');
+      } else {
+        await DataService.createSoftware(data);
+        // alert('Licencia registrada correctamente');
+      }
+      closeModal();
+      App.refreshCurrentModule();
+    } catch (error) {
+      console.error('Error saving software:', error);
+      alert('Error al guardar: ' + (error.message || 'Error desconocido'));
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+      }
     }
-    closeModal();
-    App.refreshCurrentModule();
   };
 
   const deleteSoftware = (id) => {
@@ -387,6 +483,10 @@ const SoftwareModule = (() => {
     const sw = DataService.getSoftwareById(id);
     if (sw) document.getElementById('softwareModal').innerHTML = renderFormModal(sw);
   };
+  const viewDetail = (id) => {
+    const sw = DataService.getSoftwareById(id);
+    if (sw) document.getElementById('softwareModal').innerHTML = renderDetailModal(sw);
+  };
   const openReportModal = () => { document.getElementById('softwareModal').innerHTML = renderReportModal(); };
 
   const closeModal = (event) => {
@@ -395,7 +495,7 @@ const SoftwareModule = (() => {
   };
 
   return {
-    render, openCreateModal, openEditModal, openReportModal, closeModal, deleteSoftware,
+    render, openCreateModal, openEditModal, openReportModal, closeModal, deleteSoftware, viewDetail,
     handleSearch, handleTipoFilter, handleActivacionFilter, handleSubmit, generateReport
   };
 })();

@@ -87,3 +87,31 @@ CREATE POLICY "Aguinaldos: SELECT para autenticados" ON aguinaldos_historial FOR
 CREATE POLICY "Aguinaldos: ALL para administradores" ON aguinaldos_historial FOR ALL TO authenticated USING (
     EXISTS (SELECT 1 FROM user_profiles WHERE user_profiles.id = auth.uid() AND user_profiles.role = 'Administrador')
 );
+
+-- 4. Ausencias
+CREATE TABLE IF NOT EXISTS ausencias (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    empleado_id UUID NOT NULL REFERENCES empleados(id) ON DELETE CASCADE,
+    fecha_inicio DATE NOT NULL,
+    fecha_fin DATE NOT NULL,
+    dias NUMERIC(5,1) NOT NULL,
+    tipo_descuento TEXT NOT NULL CHECK (tipo_descuento IN ('vacaciones', 'dia_laboral')),
+    motivo TEXT,
+    observaciones TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_by UUID REFERENCES auth.users(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ausencias_empleado ON ausencias(empleado_id);
+CREATE INDEX IF NOT EXISTS idx_ausencias_fecha ON ausencias(fecha_inicio);
+
+ALTER TABLE ausencias ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "ausencias_select" ON ausencias FOR SELECT TO authenticated USING (true);
+CREATE POLICY "ausencias_manage" ON ausencias FOR ALL TO authenticated USING (
+    EXISTS (
+        SELECT 1 FROM profiles p
+        JOIN roles r ON p.role_id = r.id
+        WHERE p.id = auth.uid() AND r.name = 'Administrador'
+    )
+);

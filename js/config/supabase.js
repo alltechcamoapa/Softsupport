@@ -25,7 +25,7 @@ const initSupabase = () => {
 
     if (!supabaseClient) {
         supabaseClient = supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
-        console.log('✅ Supabase client initialized');
+        // console.log('✅ Supabase client initialized');
     }
 
     return supabaseClient;

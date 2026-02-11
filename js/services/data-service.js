@@ -18,6 +18,7 @@ const DataService = (() => {
         pedidos: [],
         empleados: [],
         users: [],
+        nominas: [],
         config: {
             monedaPrincipal: 'USD',
             tipoCambio: 36.5,
@@ -49,6 +50,18 @@ const DataService = (() => {
         if (table === 'contratos') normalized.contratoId = data.codigo_contrato || data.id;
         if (table === 'equipos') normalized.equipoId = data.codigo_equipo || data.id;
 
+        if (table === 'visitas') {
+            normalized.visitaId = data.codigo_visita || data.id;
+            // Corregir trabajo_realizado si viene como string "true"/"false"
+            if (typeof data.trabajo_realizado === 'string') {
+                normalized.trabajoRealizado = data.trabajo_realizado === 'true';
+            }
+            // Asegurar que si hay un objeto cliente unido, tengamos el clienteId (slug) disponible
+            if (data.cliente) {
+                normalized.clienteIdSlug = data.cliente.codigo_cliente;
+            }
+        }
+
         // Mantener id original de supabase
         normalized.id = data.id;
 
@@ -59,8 +72,7 @@ const DataService = (() => {
     const init = async () => {
         if (isInitialized) return true;
 
-        console.log('☁️ DataService: Sincronizando desde Supabase...');
-        LogService.log('sistema', 'read', 'init', 'Sincronización de datos iniciada');
+        // console.log('☁️ DataService: Sincronizando desde Supabase...');
 
         try {
             // Asegurar que el cliente de Supabase esté inicializado
@@ -77,7 +89,10 @@ const DataService = (() => {
                 productos,
                 proformas,
                 pedidos,
-                empleados
+                empleados,
+                nominas,
+                software,
+                users
             ] = await Promise.all([
                 SupabaseDataService.getClientesSync(),
                 SupabaseDataService.getContratosSync(),
@@ -86,19 +101,26 @@ const DataService = (() => {
                 SupabaseDataService.getProductosSync(),
                 SupabaseDataService.getProformasSync(),
                 SupabaseDataService.getPedidosSync(),
-                SupabaseDataService.getEmpleadosSync?.() || Promise.resolve([])
+                SupabaseDataService.getEmpleadosSync?.() || Promise.resolve([]),
+                SupabaseDataService.getRecentNominas?.() || Promise.resolve([]),
+                SupabaseDataService.getSoftwareSync(),
+                SupabaseDataService.getUsersSync()
             ]);
 
             // Normalizar y almacenar en caché
             cache.clientes = (clientes || []).map(c => normalizeSupabaseData('clientes', c));
             cache.contratos = (contratos || []).map(c => ({ ...normalizeSupabaseData('contratos', c), cliente: normalizeSupabaseData('clientes', c.cliente) }));
             cache.equipos = (equipos || []).map(e => ({ ...normalizeSupabaseData('equipos', e), cliente: normalizeSupabaseData('clientes', e.cliente) }));
-
-            // Visitas requieren un mapeo más profundo si tienen joins
             cache.visitas = (visitas || []).map(v => normalizeSupabaseData('visitas', v));
-
-            // Productos, proformas y pedidos
-            cache.productos = (productos || []).map(p => ({ ...p, productoId: p.id }));
+            cache.software = (software || []).map(s => ({
+                ...normalizeSupabaseData('software', s),
+                cliente: s.cliente ? normalizeSupabaseData('clientes', s.cliente) : null
+            }));
+            cache.productos = (productos || []).map(p => ({
+                ...p,
+                productoId: p.id,
+                precio: parseFloat(p.precio_venta) || 0
+            }));
             cache.proformas = (proformas || []).map(p => ({
                 ...p,
                 proformaId: p.codigo_proforma,
@@ -115,7 +137,6 @@ const DataService = (() => {
             }));
             cache.empleados = (empleados || []).map(e => ({
                 ...e,
-                // Normalizar snake_case → camelCase para compatibilidad con UI
                 fechaAlta: e.fecha_alta || e.fechaAlta,
                 salarioTotal: parseFloat(e.salario_total) || e.salarioTotal || 0,
                 tipoSalario: e.tipo_salario || e.tipoSalario,
@@ -125,7 +146,25 @@ const DataService = (() => {
                 aguinaldoPagado: e.aguinaldo_pagado || e.aguinaldoPagado || false
             }));
 
+            cache.users = (users || []).map(u => ({
+                ...u,
+                role: u.role || 'Usuario', // Fallback
+                allowedModules: u.allowedModules || []
+            }));
+
+            cache.nominas = (nominas || []).map(n => ({
+                ...n,
+                empleadoNombre: n.empleado?.nombre || 'Desconocido',
+                empleadoCargo: n.empleado?.cargo || '-'
+            }));
+
             // Cargar permisos por defecto (hardcoded por seguridad)
+            cache.nominas = (nominas || []).map(n => ({
+                ...n,
+                empleadoNombre: n.empleado?.nombre || 'Desconocido',
+                empleadoCargo: n.empleado?.cargo || '-'
+            }));
+
             cache.permissions = loadDefaultPermissions();
 
             isInitialized = true;
@@ -154,16 +193,21 @@ const DataService = (() => {
 
         try {
             // Recargar todos los datos en paralelo
+            // Recargar todos los datos en paralelo
             const [
                 clientes,
                 contratos,
                 equipos,
-                visitas
+                visitas,
+                nominas,
+                software
             ] = await Promise.all([
                 SupabaseDataService.getClientesSync(),
                 SupabaseDataService.getContratosSync(),
                 SupabaseDataService.getEquiposSync(),
-                SupabaseDataService.getVisitasSync()
+                SupabaseDataService.getVisitasSync(),
+                SupabaseDataService.getRecentNominas?.() || Promise.resolve([]),
+                SupabaseDataService.getSoftwareSync()
             ]);
 
             // Actualizar caché
@@ -171,6 +215,8 @@ const DataService = (() => {
             cache.contratos = (contratos || []).map(c => ({ ...normalizeSupabaseData('contratos', c), cliente: normalizeSupabaseData('clientes', c.cliente) }));
             cache.equipos = (equipos || []).map(e => ({ ...normalizeSupabaseData('equipos', e), cliente: normalizeSupabaseData('clientes', e.cliente) }));
             cache.visitas = (visitas || []).map(v => normalizeSupabaseData('visitas', v));
+            cache.nominas = (nominas || []).map(n => ({ ...n, empleadoNombre: n.empleado?.nombre || 'Desconocido', empleadoCargo: n.empleado?.cargo || '-' }));
+            cache.software = (software || []).map(s => ({ ...normalizeSupabaseData('software', s), cliente: s.cliente ? normalizeSupabaseData('clientes', s.cliente) : null }));
 
             console.log(`✅ DataService: Refresh completo (${cache.clientes.length} Clientes)`);
 
@@ -514,28 +560,127 @@ const DataService = (() => {
     const getHistorialEquipo = () => [];
 
     // ========== VISITAS ==========
-    const getVisitasSync = () => [...cache.visitas];
-    const getVisitasFiltered = (filter) => {
-        return cache.visitas.filter(v => {
+    const getVisitasSync = () => cache.visitas || [];
+
+    const getVisitasFiltered = (filter = {}) => {
+        return (cache.visitas || []).filter(v => {
             let matches = true;
+            if (filter.search) {
+                const s = filter.search.toLowerCase();
+                const cliente = getClienteById(v.clienteId);
+                const descripcion = (v.descripcionTrabajo || '').toLowerCase();
+                matches = descripcion.includes(s) ||
+                    (v.visitaId || '').toLowerCase().includes(s) ||
+                    (cliente?.empresa || '').toLowerCase().includes(s) ||
+                    (cliente?.nombreCliente || '').toLowerCase().includes(s);
+            }
             if (filter.tipo && filter.tipo !== 'all') matches = matches && v.tipoVisita === filter.tipo;
+            if (filter.hasContrato && filter.hasContrato !== 'all') {
+                if (filter.hasContrato === 'with') matches = matches && !!v.contratoId;
+                if (filter.hasContrato === 'without') matches = matches && !v.contratoId;
+            }
+            if (filter.clienteId && filter.clienteId !== 'all') {
+                matches = matches && (
+                    v.clienteId === filter.clienteId ||
+                    v.clienteIdSlug === filter.clienteId ||
+                    v.cliente?.id === filter.clienteId
+                );
+            }
             return matches;
         });
     };
+
     const getVisitaById = (id) => cache.visitas.find(v => v.visitaId === id || v.id === id);
-    const getVisitasByCliente = (clienteId) => cache.visitas.filter(v => v.clienteId === clienteId);
+
+    // Updated to support searching by UUID or display ID, and handling nulls
+    const getVisitasByCliente = (clienteId) => {
+        if (!clienteId) return [];
+        return (cache.visitas || []).filter(v => v.clienteId === clienteId || v.cliente_id === clienteId || v.cliente?.id === clienteId);
+    };
+
     const getVisitasByMonth = (year, month) => {
-        return cache.visitas.filter(v => {
+        return (cache.visitas || []).filter(v => {
+            if (!v.fechaInicio) return false;
             const fecha = new Date(v.fechaInicio);
             return fecha.getFullYear() === year && fecha.getMonth() === month;
         });
     };
 
-    // Estos quedan pendientes de impl completa en SupabaseService
-    const createVisita = () => console.log('Create visita pending backend');
-    const updateVisita = () => { };
-    const deleteVisita = () => { };
-    const getVisitasStats = () => ({ esteMes: 0, completadas: 0, ingresosEventuales: 0 });
+    const createVisita = async (data) => {
+        // Generar ID local temporal si no existe
+        if (!data.visitaId) data.visitaId = `VIS-${Date.now().toString().slice(-6)}`;
+
+        const res = await SupabaseDataService.createVisita(data);
+        if (res.success) {
+            const newItem = normalizeSupabaseData('visitas', res.data);
+
+            // Re-fetch or link related objects for cache consistency
+            if (newItem.clienteId) newItem.cliente = getClienteById(newItem.clienteId);
+            if (newItem.equipoId) newItem.equipo = getEquipoById(newItem.equipoId);
+
+            if (!cache.visitas) cache.visitas = [];
+            cache.visitas.unshift(newItem);
+
+            LogService.log('visitas', 'create', newItem.id, `Visita creada: ${newItem.visitaId}`);
+            return newItem;
+        }
+        throw new Error(res.error || 'Error al crear visita');
+    };
+
+    const updateVisita = async (id, data) => {
+        // Find existing to get UUID
+        const current = getVisitaById(id);
+        const uuid = current ? current.id : id;
+
+        const res = await SupabaseDataService.updateVisita(uuid, data);
+        if (res.success) {
+            const updatedItem = normalizeSupabaseData('visitas', res.data);
+
+            const idx = cache.visitas.findIndex(v => v.id === uuid || v.visitaId === id);
+            if (idx !== -1) {
+                // Preserve linked objects if not in update, or update them
+                const oldItem = cache.visitas[idx];
+                cache.visitas[idx] = { ...oldItem, ...updatedItem };
+
+                // Refresh links if IDs changed
+                if (updatedItem.clienteId) cache.visitas[idx].cliente = getClienteById(updatedItem.clienteId);
+                if (updatedItem.equipoId) cache.visitas[idx].equipo = getEquipoById(updatedItem.equipoId);
+            }
+
+            LogService.log('visitas', 'update', uuid, `Visita actualizada: ${id}`);
+            return true;
+        }
+        throw new Error(res.error || 'Error al actualizar visita');
+    };
+
+    const deleteVisita = async (id) => {
+        const current = getVisitaById(id);
+        const uuid = current ? current.id : id;
+
+        const res = await SupabaseDataService.deleteVisita(uuid);
+        if (res.success) {
+            cache.visitas = cache.visitas.filter(v => v.id !== uuid && v.visitaId !== id);
+            LogService.log('visitas', 'delete', uuid, `Visita eliminada: ${id}`);
+            return true;
+        }
+        throw new Error(res.error || 'Error al eliminar visita');
+    };
+
+    const getVisitasStats = () => {
+        const now = new Date();
+        const thisMonth = now.getMonth();
+        const thisYear = now.getFullYear();
+        const visitas = cache.visitas || [];
+
+        return {
+            esteMes: visitas.filter(v => {
+                const d = new Date(v.fechaInicio);
+                return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+            }).length,
+            completadas: visitas.filter(v => v.trabajoRealizado).length,
+            ingresosEventuales: visitas.reduce((sum, v) => sum + (v.costoServicio || 0), 0)
+        };
+    };
 
     // ========== HELPERS GENERALES ==========
     const getConfig = () => ({ ...cache.config });
@@ -555,26 +700,28 @@ const DataService = (() => {
     const getUsersSync = () => cache.users;
     const getUserByUsername = () => null;
     const createUser = async (data) => {
-        // Implementación con Supabase (nota: puede cerrar la sesión actual)
-        if (confirm('⚠️ ADVERTENCIA:\n\nAl crear un nuevo usuario con Supabase Auth, se iniciará sesión automáticamente con el nuevo usuario.')) {
-            const res = await SupabaseDataService.createUser(data);
-            if (res.user) {
-                if (!cache.users) cache.users = [];
-                // Intentar obtener el username del metadata o usar el nombre
-                const newUser = {
-                    id: res.user.id,
-                    username: data.username,
-                    name: data.name,
-                    email: data.email,
-                    role: data.role
-                };
-                cache.users.push(newUser);
-                LogService.log('configuracion', 'create', newUser.id, `Usuario creado: ${newUser.username}`);
-                return { success: true, user: newUser };
-            }
-            return { error: 'Error al crear usuario' };
+        // Implementación con Supabase
+        const res = await SupabaseDataService.createUser(data);
+
+        if (res.error) {
+            return { error: res.error };
         }
-        return { error: 'Cancelado por el usuario' };
+
+        if (res.user) {
+            if (!cache.users) cache.users = [];
+            // Intentar obtener el username del metadata o usar el nombre
+            const newUser = {
+                id: res.user.id,
+                username: data.username,
+                name: data.name,
+                email: data.email,
+                role: data.role
+            };
+            cache.users.push(newUser);
+            LogService.log('configuracion', 'create', newUser.id, `Usuario creado: ${newUser.username}`);
+            return { success: true, user: newUser };
+        }
+        return { error: 'Error desconocido al crear usuario' };
     };
     const updateUser = () => { };
     const deleteUser = () => { };
@@ -679,7 +826,110 @@ const DataService = (() => {
     ];
 
     const getBankAccounts = () => [];
-    const getReportesStats = () => ({});
+    const getReportesStats = (filter = {}) => {
+        const today = new Date();
+        let startDate, endDate;
+
+        if (filter.periodo === 'custom') {
+            startDate = filter.fechaInicio ? new Date(filter.fechaInicio + 'T00:00:00') : null;
+            endDate = filter.fechaFin ? new Date(filter.fechaFin + 'T23:59:59') : null;
+        } else {
+            endDate = new Date();
+            startDate = new Date();
+            if (filter.periodo === 'week') startDate.setDate(today.getDate() - 7);
+            else if (filter.periodo === 'quarter') startDate.setMonth(today.getMonth() - 3);
+            else if (filter.periodo === 'year') startDate.setFullYear(today.getFullYear() - 1);
+            else startDate.setMonth(today.getMonth() - 1); // default month
+        }
+
+        const filteredVisitas = (cache.visitas || []).filter(v => {
+            if (!v.fechaInicio && !v.fecha) return false;
+            const date = new Date(v.fechaInicio || v.fecha);
+            return (!startDate || date >= startDate) && (!endDate || date <= endDate);
+        });
+
+        const totalClientes = cache.clientes.length;
+        const totalServicios = filteredVisitas.length;
+
+        // Ingresos de contratos activos 
+        const ingresosTotales = cache.contratos
+            .filter(c => c.estadoContrato === 'Activo' || c.status === 'Activo')
+            .reduce((sum, c) => sum + (parseFloat(c.valorContrato || c.valor || 0)), 0);
+
+        const contratosActivos = cache.contratos.filter(c => c.estadoContrato === 'Activo' || c.status === 'Activo').length;
+
+        // Servicios por Técnico
+        const tecnicoMap = {};
+        filteredVisitas.forEach(v => {
+            const t = v.usuarioSoporte || 'Sin asignar';
+            tecnicoMap[t] = (tecnicoMap[t] || 0) + 1;
+        });
+        const serviciosPorTecnico = Object.entries(tecnicoMap)
+            .map(([tecnico, count]) => ({ tecnico, count }))
+            .sort((a, b) => b.count - a.count);
+
+        // Servicios por Tipo
+        const serviciosPorTipo = {
+            fisica: filteredVisitas.filter(v => v.tipoVisita === 'Física').length,
+            remota: filteredVisitas.filter(v => v.tipoVisita === 'Remota').length
+        };
+
+        // Contrato vs Eventual
+        const contratoVsEventual = {
+            contrato: filteredVisitas.filter(v => !!v.contratoId).length,
+            eventual: filteredVisitas.filter(v => !v.contratoId).length
+        };
+
+        // Ingresos por Moneda
+        const ingresosPorMoneda = {
+            usd: ingresosTotales,
+            nio: ingresosTotales * (cache.config.tipoCambio || 36.5)
+        };
+
+        // Historial por Cliente (Top 5 con más servicios)
+        const clienteStats = {};
+        cache.clientes.forEach(c => {
+            const clientVisits = cache.visitas.filter(v => v.clienteId === c.id || v.clienteId === c.clienteId);
+            const lastVisit = clientVisits.length > 0 ?
+                clientVisits.sort((a, b) => new Date(b.fechaInicio) - new Date(a.fechaInicio))[0].fechaInicio : null;
+
+            clienteStats[c.id || c.clienteId] = {
+                empresa: c.empresa || c.nombreCliente || 'S/N',
+                nombreCliente: c.nombreCliente || '',
+                totalServicios: clientVisits.length,
+                ultimoServicio: lastVisit,
+                estado: c.estado || 'Activo'
+            };
+        });
+        const historialClientes = Object.values(clienteStats)
+            .sort((a, b) => b.totalServicios - a.totalServicios)
+            .slice(0, 5);
+
+        // Estado de Equipos
+        const totalEquipos = cache.equipos.length;
+        const estadosDefinidos = ['Operativo', 'En Reparación', 'Fuera de Servicio'];
+        const estadoEquipos = estadosDefinidos.map(estado => {
+            const count = cache.equipos.filter(e => e.estado === estado).length;
+            return {
+                estado,
+                count,
+                porcentaje: totalEquipos > 0 ? (count / totalEquipos) * 100 : 0
+            };
+        });
+
+        return {
+            totalClientes,
+            totalServicios,
+            ingresosTotales,
+            contratosActivos,
+            serviciosPorTecnico,
+            serviciosPorTipo,
+            contratoVsEventual,
+            ingresosPorMoneda,
+            historialClientes,
+            estadoEquipos
+        };
+    };
 
     // Placeholders para módulos no migrados completamente
     const getReparacionesByEquipo = () => [];
@@ -694,9 +944,12 @@ const DataService = (() => {
             if (filter.search) {
                 const s = filter.search.toLowerCase();
                 matches = (p.nombre || '').toLowerCase().includes(s) ||
+                    (p.codigo || '').toLowerCase().includes(s) ||
+                    (p.descripcion || '').toLowerCase().includes(s) ||
                     (p.categoria || '').toLowerCase().includes(s);
             }
             if (filter.tipo && filter.tipo !== 'all') matches = matches && p.tipo === filter.tipo;
+            if (filter.estado && filter.estado !== 'all') matches = matches && p.estado === filter.estado;
             return matches;
         });
     };
@@ -705,7 +958,11 @@ const DataService = (() => {
     const createProducto = async (data) => {
         const res = await SupabaseDataService.createProducto(data);
         if (res.success) {
-            const item = { ...res.data, productoId: res.data.id };
+            const item = {
+                ...res.data,
+                productoId: res.data.id,
+                precio: parseFloat(res.data.precio_venta) || 0
+            };
             cache.productos.unshift(item);
             LogService.log('productos', 'create', item.id, `Producto creado: ${item.nombre}`, { codigo: item.codigo });
             return item;
@@ -719,7 +976,13 @@ const DataService = (() => {
         const res = await SupabaseDataService.updateProducto(uuid, data);
         if (res.success) {
             const idx = cache.productos.findIndex(p => p.id === uuid || p.productoId === id);
-            if (idx !== -1) cache.productos[idx] = { ...cache.productos[idx], ...res.data };
+            if (idx !== -1) {
+                cache.productos[idx] = {
+                    ...cache.productos[idx],
+                    ...res.data,
+                    precio: parseFloat(res.data.precio_venta) || cache.productos[idx].precio || 0
+                };
+            }
             LogService.log('productos', 'update', uuid, `Producto actualizado: ${current?.nombre || data.nombre}`);
             return true;
         }
@@ -737,13 +1000,86 @@ const DataService = (() => {
         }
         throw new Error(res.error || 'Error al eliminar producto');
     };
-    const getSoftwareFiltered = () => [];
-    const getSoftwareById = () => null;
-    const getSoftwareByRegistro = () => [];
-    const getSoftwareUniqueRegistros = () => [];
-    const createSoftware = () => { };
-    const updateSoftware = () => { };
-    const deleteSoftware = () => { };
+    const getSoftwareFiltered = (filter) => {
+        return cache.software.filter(s => {
+            let matches = true;
+            if (filter.search) {
+                const term = filter.search.toLowerCase();
+                const clienteNombre = s.cliente?.nombreCliente || s.cliente?.empresa || s.nombreRegistro || '';
+                matches = (s.nombreSoftware || '').toLowerCase().includes(term) ||
+                    (s.numeroLicencia || '').toLowerCase().includes(term) ||
+                    (s.numeroSerie || '').toLowerCase().includes(term) ||
+                    clienteNombre.toLowerCase().includes(term);
+            }
+            if (filter.tipo && filter.tipo !== 'all') matches = matches && s.tipoLicencia === filter.tipo;
+            if (filter.activacion && filter.activacion !== 'all') matches = matches && s.modoActivacion === filter.activacion;
+            return matches;
+        });
+    };
+
+    const getSoftwareById = (id) => cache.software.find(s => s.id === id);
+
+    const getSoftwareByRegistro = (registro) => {
+        return cache.software.filter(s => {
+            const nombre = s.cliente?.nombreCliente || s.cliente?.empresa || s.nombreRegistro || '';
+            return nombre === registro;
+        });
+    };
+
+    const getSoftwareUniqueRegistros = () => {
+        const registros = new Set();
+        cache.software.forEach(s => {
+            const nombre = s.cliente?.nombreCliente || s.cliente?.empresa || s.nombreRegistro;
+            if (nombre) registros.add(nombre);
+        });
+        return Array.from(registros).sort();
+    };
+
+    const createSoftware = async (data) => {
+        const res = await SupabaseDataService.createSoftware(data);
+        if (res.success) {
+            // Need to fetch full object including client or manually reconstruct
+            // For now, let's normalize what we have. If client is linked, we just have id.
+            // Ideally we fetch it back or look it up in cache.
+            const newItem = normalizeSupabaseData('software', res.data);
+            if (newItem.clienteId) {
+                newItem.cliente = getClienteById(newItem.clienteId);
+            }
+            cache.software.unshift(newItem);
+            LogService.log('software', 'create', newItem.id, `Software creado: ${newItem.nombreSoftware}`);
+            return newItem;
+        }
+        throw new Error(res.error || 'Error al crear software');
+    };
+
+    const updateSoftware = async (id, data) => {
+        const current = getSoftwareById(id);
+        const res = await SupabaseDataService.updateSoftware(id, data);
+        if (res.success) {
+            const updatedItem = normalizeSupabaseData('software', res.data);
+            if (updatedItem.clienteId) {
+                updatedItem.cliente = getClienteById(updatedItem.clienteId);
+            }
+            const idx = cache.software.findIndex(s => s.id === id);
+            if (idx !== -1) cache.software[idx] = { ...cache.software[idx], ...updatedItem };
+            LogService.log('software', 'update', id, `Software actualizado: ${updatedItem.nombreSoftware}`);
+            return true;
+        }
+        throw new Error(res.error || 'Error al actualizar software');
+    };
+
+    const deleteSoftware = async (id) => {
+        const current = getSoftwareById(id);
+        const res = await SupabaseDataService.deleteSoftware(id);
+        if (res.success) {
+            cache.software = cache.software.filter(s => s.id !== id);
+            LogService.log('software', 'delete', id, `Software eliminado: ${current?.nombreSoftware || 'Desconocido'}`);
+            return true;
+        }
+        throw new Error(res.error || 'Error al eliminar software');
+    };
+
+    // Proformas (kept for context context)
     const getProformasSync = () => [...cache.proformas];
     const getProformasFiltered = (filter = {}) => {
         return cache.proformas.filter(p => {
@@ -1113,9 +1449,40 @@ const DataService = (() => {
         getNominasByEmpleado: (id) => SupabaseDataService.getNominasByEmpleado(id),
         createNomina: async (data) => {
             const res = await SupabaseDataService.createNomina(data);
-            if (res.success) return res.data;
+            if (res.success) {
+                // Agregar a cache local
+                const newNomina = { ...res.data, empleadoNombre: getEmpleadoById(data.empleadoId)?.nombre };
+                if (!cache.nominas) cache.nominas = [];
+                cache.nominas.unshift(newNomina);
+                return res.data;
+            }
             throw new Error(res.error);
-        }
+        },
+        getNominasSync: () => [...(cache.nominas || [])],
+
+        // Ausencias
+        getAusenciasByEmpleado: (id) => SupabaseDataService.getAusenciasByEmpleado(id),
+        getAllAusencias: () => SupabaseDataService.getAllAusencias(),
+        createAusencia: async (data) => {
+            const res = await SupabaseDataService.createAusencia(data);
+            if (res.success) {
+                // Si se descuenta de vacaciones, actualizar cache local
+                if (data.tipoDescuento === 'vacaciones') {
+                    const emp = getEmpleadoById(data.empleadoId);
+                    if (emp) emp.vacacionesTomadas = (emp.vacacionesTomadas || 0) + data.dias;
+                }
+                return res.data;
+            }
+            throw new Error(res.error);
+        },
+        deleteAusencia: async (id) => {
+            const res = await SupabaseDataService.deleteAusencia(id);
+            if (res.success) return true;
+            throw new Error(res.error);
+        },
+
+        // All Nominas (history)
+        getAllNominas: () => SupabaseDataService.getAllNominas(),
     };
 })();
 

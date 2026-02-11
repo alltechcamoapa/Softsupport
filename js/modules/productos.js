@@ -96,7 +96,7 @@ const ProductosModule = (() => {
               <td>
                 <span class="badge ${p.tipo === 'Servicio' ? 'badge--info' : 'badge--primary'}">${p.tipo}</span>
               </td>
-              <td class="font-medium">$${parseFloat(p.precio).toFixed(2)}</td>
+              <td class="font-medium">$${parseFloat(p.precio_venta || p.precio || 0).toFixed(2)}</td>
               <td>
                 <span class="badge ${p.estado === 'Activo' ? 'badge--success' : 'badge--warning'}">
                   ${p.estado}
@@ -165,16 +165,10 @@ const ProductosModule = (() => {
                 </select>
               </div>
               <div class="form-group">
-                <label class="form-label form-label--required">Código</label>
-                <input type="text" name="codigo" class="form-input" 
-                       value="${producto?.codigo || ''}" required placeholder="Ej: SRV-001">
+                <label class="form-label form-label--required">Nombre</label>
+                <input type="text" name="nombre" class="form-input" 
+                       value="${producto?.nombre || ''}" required placeholder="Nombre corto del item">
               </div>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label form-label--required">Nombre</label>
-              <input type="text" name="nombre" class="form-input" 
-                     value="${producto?.nombre || ''}" required placeholder="Nombre corto del item">
             </div>
 
             <div class="form-group">
@@ -199,7 +193,7 @@ const ProductosModule = (() => {
               <div class="form-group">
                 <label class="form-label form-label--required">Precio Unitario ($)</label>
                 <input type="number" name="precio" class="form-input" 
-                       value="${producto?.precio || 0}" min="0" step="0.01" required>
+                       value="${producto?.precio_venta || producto?.precio || 0}" min="0" step="0.01" required>
               </div>
             </div>
 

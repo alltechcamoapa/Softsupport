@@ -173,7 +173,7 @@
   <script>
     // Initialize with session sync
     document.addEventListener('DOMContentLoaded', async () => {
-      console.log('🚀 ALLTECH SUPPORT - Iniciando...');
+      // console.log('🚀 ALLTECH SUPPORT - Iniciando...');
 
       try {
         // IMPORTANT: State.init() MUST run first to load localStorage data
@@ -184,7 +184,7 @@
 
         // Cargar datos de negocio desde Supabase (Pre-fetching)
         if (State.isLoggedIn()) {
-          console.log('☁️ Iniciando carga de datos...');
+          // console.log('☁️ Iniciando carga de datos...');
           const success = await DataService.init();
           if (!success) console.warn('⚠️ DataService inició con datos parciales o vacíos');
 
@@ -197,7 +197,7 @@
         // Initialize the app
         App.init();
 
-        console.log('✅ ALLTECH SUPPORT - Inicialización completa');
+        // console.log('✅ ALLTECH SUPPORT - Inicialización completa');
       } catch (error) {
         console.error('❌ Error crítico en inicialización:', error);
         // Even on error, try to render something

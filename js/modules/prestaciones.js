@@ -19,30 +19,34 @@ const PrestacionesModule = (() => {
         </div>
 
         <!-- Tabs -->
-        <div class="tabs">
-          <button class="tab ${currentTab === 'empleados' ? 'tab--active' : ''}" 
+        <div class="tabs-container">
+          <button class="tab-btn ${currentTab === 'empleados' ? 'active' : ''}" 
                   onclick="PrestacionesModule.changeTab('empleados')">
-            ${Icons.users} Empleados
+            ${Icons.users} <span>Empleados</span>
           </button>
-          <button class="tab ${currentTab === 'vacaciones' ? 'tab--active' : ''}" 
+          <button class="tab-btn ${currentTab === 'vacaciones' ? 'active' : ''}" 
                   onclick="PrestacionesModule.changeTab('vacaciones')">
-            ${Icons.calendar} Vacaciones
+            ${Icons.calendar} <span>Vacaciones</span>
           </button>
-          <button class="tab ${currentTab === 'aguinaldo' ? 'tab--active' : ''}" 
+          <button class="tab-btn ${currentTab === 'ausencias' ? 'active' : ''}" 
+                  onclick="PrestacionesModule.changeTab('ausencias')">
+            ${Icons.clock || '🕐'} <span>Ausencias</span>
+          </button>
+          <button class="tab-btn ${currentTab === 'aguinaldo' ? 'active' : ''}" 
                   onclick="PrestacionesModule.changeTab('aguinaldo')">
-            ${Icons.gift || '🎁'} Aguinaldo
+            ${Icons.gift || '🎁'} <span>Aguinaldo</span>
           </button>
-          <button class="tab ${currentTab === 'recibos' ? 'tab--active' : ''}" 
+          <button class="tab-btn ${currentTab === 'recibos' ? 'active' : ''}" 
                   onclick="PrestacionesModule.changeTab('recibos')">
-            ${Icons.fileText} Recibos de Pago
+            ${Icons.fileText} <span>Recibos</span>
           </button>
-          <button class="tab ${currentTab === 'liquidacion' ? 'tab--active' : ''}" 
+          <button class="tab-btn ${currentTab === 'liquidacion' ? 'active' : ''}" 
                   onclick="PrestacionesModule.changeTab('liquidacion')">
-            ${Icons.dollarSign || '💰'} Liquidación
+            ${Icons.dollarSign || '💰'} <span>Liquidación</span>
           </button>
-          <button class="tab ${currentTab === 'reportes' ? 'tab--active' : ''}" 
+          <button class="tab-btn ${currentTab === 'reportes' ? 'active' : ''}" 
                   onclick="PrestacionesModule.changeTab('reportes')">
-            ${Icons.barChart} Reportes
+            ${Icons.barChart} <span>Reportes</span>
           </button>
         </div>
 
@@ -62,6 +66,8 @@ const PrestacionesModule = (() => {
         return renderEmpleadosTab();
       case 'vacaciones':
         return renderVacacionesTab();
+      case 'ausencias':
+        return renderAusenciasTab();
       case 'aguinaldo':
         return renderAguinaldoTab();
       case 'recibos':
@@ -94,7 +100,7 @@ const PrestacionesModule = (() => {
       </div>
 
       <div class="table-container">
-        <table class="table">
+        <table class="data-table">
           <thead>
             <tr>
               <th>Empleado</th>
@@ -120,27 +126,27 @@ const PrestacionesModule = (() => {
       const contrato = emp.tipoContrato || emp.tipo_contrato || 'No especificado';
       return `
               <tr>
-                <td>
+                <td data-label="Empleado">
                   <div>
                     <div class="font-medium">${emp.nombre}</div>
                     <div class="text-sm text-muted">${emp.email || '-'}</div>
                   </div>
                 </td>
-                <td>${emp.cedula || '-'}</td>
-                <td>${emp.cargo || '-'}</td>
-                <td>${fechaAlta ? new Date(fechaAlta).toLocaleDateString('es-NI') : '-'}</td>
-                <td class="font-medium">C$${salario.toLocaleString('es-NI', { minimumFractionDigits: 2 })}</td>
-                <td>
+                <td data-label="Cédula">${emp.cedula || '-'}</td>
+                <td data-label="Cargo">${emp.cargo || '-'}</td>
+                <td data-label="Fecha Alta">${fechaAlta ? new Date(fechaAlta).toLocaleDateString('es-NI') : '-'}</td>
+                <td data-label="Salario" class="font-medium">C$${salario.toLocaleString('es-NI', { minimumFractionDigits: 2 })}</td>
+                <td data-label="Tipo Contrato">
                   <span class="badge ${contrato === 'Indefinido' ? 'badge--success' : 'badge--warning'}">
                     ${contrato}
                   </span>
                 </td>
-                <td>
+                <td data-label="Estado">
                   <span class="badge ${emp.estado === 'Activo' ? 'badge--success' : 'badge--error'}">
                     ${emp.estado || 'Activo'}
                   </span>
                 </td>
-                <td>
+                <td data-label="Acciones">
                   <div class="table__actions">
                     <button class="btn btn--ghost btn--icon btn--sm" 
                             onclick="PrestacionesModule.viewEmpleado('${emp.id}')" 
@@ -185,7 +191,7 @@ const PrestacionesModule = (() => {
         </div>
         <div class="card__body">
           <div class="table-container">
-            <table class="table">
+            <table class="data-table">
               <thead>
                 <tr>
                   <th>Empleado</th>
@@ -244,6 +250,83 @@ const PrestacionesModule = (() => {
       </div>
     `;
   };
+  // ========== AUSENCIAS TAB ==========
+  const renderAusenciasTab = () => {
+    // Cargar ausencias de forma asíncrona
+    setTimeout(async () => {
+      try {
+        const ausencias = await DataService.getAllAusencias();
+        const tbody = document.getElementById('ausenciasTableBody');
+        if (!tbody) return;
+        if (!ausencias || ausencias.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" class="text-center">No hay ausencias registradas</td></tr>';
+          return;
+        }
+        tbody.innerHTML = ausencias.map(a => `
+          <tr>
+            <td>
+              <div class="font-medium">${a.empleado?.nombre || 'N/A'}</div>
+              <div class="text-sm text-muted">${a.empleado?.cargo || ''}</div>
+            </td>
+            <td>${new Date(a.fecha_inicio).toLocaleDateString('es-NI')}</td>
+            <td>${new Date(a.fecha_fin).toLocaleDateString('es-NI')}</td>
+            <td class="text-center">${a.dias}</td>
+            <td>
+              <span class="badge ${a.tipo_descuento === 'vacaciones' ? 'badge--warning' : 'badge--info'}">
+                ${a.tipo_descuento === 'vacaciones' ? 'Vacaciones' : 'Día Laboral'}
+              </span>
+            </td>
+            <td>${a.motivo || '-'}</td>
+            <td>
+              <button class="btn btn--ghost btn--sm btn--icon text-error" 
+                      onclick="PrestacionesModule.deleteAusencia('${a.id}')">${Icons.trash}</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (e) {
+        console.error('Error loading ausencias:', e);
+      }
+    }, 100);
+
+    return `
+      <div class="card">
+        <div class="card__header">
+          <h3 class="card__title">${Icons.clock || '🕐'} Control de Ausencias</h3>
+          <button class="btn btn--primary btn--sm" onclick="PrestacionesModule.registrarAusencia()">
+            ${Icons.plus} Registrar Ausencia
+          </button>
+        </div>
+        <div class="card__body">
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Empleado</th>
+                  <th>Desde</th>
+                  <th>Hasta</th>
+                  <th>Días</th>
+                  <th>Descuento</th>
+                  <th>Motivo</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="ausenciasTableBody">
+                <tr><td colspan="7" class="text-center">Cargando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="info-card info-card--primary" style="margin-top: var(--spacing-lg);">
+        <h4>📋 Sobre las Ausencias</h4>
+        <ul style="margin: var(--spacing-sm) 0; padding-left: var(--spacing-lg);">
+          <li><strong>Vacaciones:</strong> Se descuenta del saldo de vacaciones del empleado</li>
+          <li><strong>Día Laboral:</strong> Se registra como ausencia laboral sin afectar vacaciones</li>
+        </ul>
+      </div>
+    `;
+  };
 
   // ========== AGUINALDO TAB ==========
   const renderAguinaldoTab = () => {
@@ -280,7 +363,7 @@ const PrestacionesModule = (() => {
         </div>
         <div class="card__body">
           <div class="table-container">
-            <table class="table">
+            <table class="data-table">
               <thead>
                 <tr>
                   <th>Empleado</th>
@@ -364,7 +447,23 @@ const PrestacionesModule = (() => {
                 <input type="month" name="mes" class="form-input" 
                        value="${new Date().toISOString().slice(0, 7)}" required>
               </div>
+              <div class="form-group" id="quincenaGroup">
+                 <label class="form-label form-label--required">Quincena</label>
+                 <select name="quincena" class="form-select">
+                    <option value="1">Primera (1-15)</option>
+                    <option value="2">Segunda (16-Fin)</option>
+                 </select>
+              </div>
             </div>
+            <script>
+                document.querySelector('select[name="periodo"]').addEventListener('change', function(e) {
+                    const qGroup = document.getElementById('quincenaGroup');
+                    qGroup.style.display = e.target.value === 'quincenal' ? 'block' : 'none';
+                    // Trigger initial state
+                });
+                // Initial state check - simplistic, better to use inline style
+                document.getElementById('quincenaGroup').style.display = 'none'; 
+            </script>
 
             <div class="form-group">
               <label class="form-label">Empleados (dejar vacío para todos)</label>
@@ -397,7 +496,162 @@ const PrestacionesModule = (() => {
           <li>Salario neto a pagar</li>
         </ul>
       </div>
+
+      <div class="card" style="margin-top: var(--spacing-lg);">
+        <div class="card__header">
+          <h3 class="card__title">${Icons.clock || '⏱️'} Historial de Recibos Generados</h3>
+        </div>
+        <div class="card__body">
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Empleado</th>
+                            <th>Período</th>
+                            <th>Tipo</th>
+                            <th class="text-right">Salario Base</th>
+                            <th class="text-right">INSS</th>
+                            <th class="text-right">IR</th>
+                            <th class="text-right">Neto</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historialRecibosBody">
+                        <tr><td colspan="9" class="text-center">Cargando historial...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+      </div>
     `;
+  };
+
+  // Cargar historial de recibos async al renderizar tab
+  const loadHistorialRecibos = async () => {
+    const tbody = document.getElementById('historialRecibosBody');
+    if (!tbody) return;
+    try {
+      const nominas = await DataService.getAllNominas();
+      if (!nominas || nominas.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center">No hay recibos generados</td></tr>';
+        return;
+      }
+      tbody.innerHTML = nominas.map(n => {
+        const nombre = n.empleado?.nombre || 'N/A';
+        const cargo = n.empleado?.cargo || '';
+        return `
+          <tr>
+            <td>
+              <div class="font-medium">${nombre}</div>
+              <div class="text-sm text-muted">${cargo}</div>
+            </td>
+            <td>${n.periodo_inicio ? new Date(n.periodo_inicio).toLocaleDateString('es-NI') : '-'} al ${n.periodo_fin ? new Date(n.periodo_fin).toLocaleDateString('es-NI') : '-'}</td>
+            <td>${n.tipo_periodo || '-'}</td>
+            <td class="text-right">C$${(n.salario_base || 0).toLocaleString('es-NI', { minimumFractionDigits: 2 })}</td>
+            <td class="text-right">C$${(n.deduccion_inss || 0).toLocaleString('es-NI', { minimumFractionDigits: 2 })}</td>
+            <td class="text-right">C$${(n.deduccion_ir || 0).toLocaleString('es-NI', { minimumFractionDigits: 2 })}</td>
+            <td class="text-right font-bold">C$${(n.total_neto || 0).toLocaleString('es-NI', { minimumFractionDigits: 2 })}</td>
+            <td><span class="badge ${n.estado === 'Pagado' ? 'badge--success' : 'badge--warning'}">${n.estado || 'Pagado'}</span></td>
+            <td>
+              <div class="table__actions">
+                <button class="btn btn--ghost btn--sm btn--icon" title="Imprimir recibo"
+                        onclick="PrestacionesModule.imprimirRecibo('${n.id}')">
+                  ${Icons.printer || '🖨️'}
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    } catch (e) {
+      console.error('Error cargando historial de recibos:', e);
+      tbody.innerHTML = '<tr><td colspan="9" class="text-center text-error">Error al cargar historial</td></tr>';
+    }
+  };
+
+  // Imprimir un recibo individual
+  const imprimirRecibo = async (nominaId) => {
+    try {
+      const nominas = await DataService.getAllNominas();
+      const n = nominas.find(x => x.id === nominaId);
+      if (!n) {
+        App.showNotification?.('Recibo no encontrado', 'error');
+        return;
+      }
+
+      const nombre = n.empleado?.nombre || 'N/A';
+      const cargo = n.empleado?.cargo || '';
+      const periodoInicio = n.periodo_inicio ? new Date(n.periodo_inicio).toLocaleDateString('es-NI') : '-';
+      const periodoFin = n.periodo_fin ? new Date(n.periodo_fin).toLocaleDateString('es-NI') : '-';
+      const fmt = (v) => (v || 0).toLocaleString('es-NI', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+      const content = `
+        <div style="border: 2px solid #333; padding: 30px; max-width: 600px; margin: 0 auto; background: white; box-shadow: 0 0 10px rgba(0,0,0,0.1); border-radius: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 20px;">
+            <div style="text-align: left;">
+              <h2 style="margin: 0; color: #1a73e8;">RECIBO DE PAGO</h2>
+              <p style="margin: 5px 0; font-weight: bold; color: #444;">ALLTECH SUPPORT</p>
+              <p style="margin: 0; font-size: 11px; color: #666;">Servicios Profesionales de TI</p>
+            </div>
+            <div style="text-align: right; font-size: 12px; color: #666;">
+              <p style="margin: 0;"><strong>N° Recibo:</strong> #${n.id.slice(0, 8).toUpperCase()}</p>
+              <p style="margin: 0;"><strong>Fecha:</strong> ${new Date().toLocaleDateString('es-NI')}</p>
+            </div>
+          </div>
+          
+          <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid #1a73e8;">
+            <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+              <tr><td style="padding: 3px 0;"><strong>Empleado:</strong></td><td style="padding: 3px 0;">${nombre}</td></tr>
+              <tr><td style="padding: 3px 0;"><strong>Cargo:</strong></td><td style="padding: 3px 0;">${cargo}</td></tr>
+              <tr><td style="padding: 3px 0;"><strong>Período:</strong></td><td style="padding: 3px 0;">${periodoInicio} al ${periodoFin}</td></tr>
+              <tr><td style="padding: 3px 0;"><strong>Tipo:</strong></td><td style="padding: 3px 0;">${n.tipo_periodo || '-'}</td></tr>
+            </table>
+          </div>
+          
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px;">
+            <thead style="border-bottom: 2px solid #1a73e8;">
+              <tr><th style="padding: 10px 0; text-align: left;">Concepto</th><th style="padding: 10px 0; text-align: right;">Ingresos/Egresos</th></tr>
+            </thead>
+            <tbody>
+              <tr><td style="padding: 10px 0; border-bottom: 1px solid #eee;">Salario Base</td><td style="padding: 10px 0; border-bottom: 1px solid #eee; text-align: right;">C$ ${fmt(n.salario_base)}</td></tr>
+              <tr><td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #d32f2f;">(-) INSS Laboral (7%)</td><td style="padding: 10px 0; border-bottom: 1px solid #eee; text-align: right; color: #d32f2f;">C$ ${fmt(n.deduccion_inss)}</td></tr>
+              <tr><td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #d32f2f;">(-) Impuesto sobre la Renta (IR)</td><td style="padding: 10px 0; border-bottom: 1px solid #eee; text-align: right; color: #d32f2f;">C$ ${fmt(n.deduccion_ir)}</td></tr>
+              ${n.otras_deducciones ? `<tr><td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #d32f2f;">(-) Otras Deducciones</td><td style="padding: 10px 0; border-bottom: 1px solid #eee; text-align: right; color: #d32f2f;">C$ ${fmt(n.otras_deducciones)}</td></tr>` : ''}
+              <tr style="background: #e8f0fe;">
+                <td style="padding: 12px 10px; font-weight: bold; border-radius: 4px 0 0 4px;">NETO A PAGAR</td>
+                <td style="padding: 12px 10px; text-align: right; font-weight: bold; font-size: 16px; border-radius: 0 4px 4px 0;">C$ ${fmt(n.total_neto)}</td>
+              </tr>
+            </tbody>
+          </table>
+          
+          ${n.notas ? `<p style="margin-top: 15px; font-size: 12px; color: #666; font-style: italic;"><strong>Notas:</strong> ${n.notas}</p>` : ''}
+          
+          <div style="margin-top: 60px; display: flex; justify-content: space-between; gap: 40px;">
+            <div style="flex: 1; text-align: center;">
+              <div style="border-top: 1px solid #333; padding-top: 8px; font-size: 11px;">
+                <strong>${nombre}</strong><br>
+                Firma Empleado
+              </div>
+            </div>
+            <div style="flex: 1; text-align: center;">
+              <div style="border-top: 1px solid #333; padding-top: 8px; font-size: 11px;">
+                <strong>ALLTECH SUPPORT</strong><br>
+                Firma y Sello Empresa
+              </div>
+            </div>
+          </div>
+          <p style="text-align: center; font-size: 9px; color: #999; margin-top: 30px;">
+            Este recibo de pago es un documento oficial. Consérvelo para sus registros.
+          </p>
+        </div>
+      `;
+
+      printDocument(`Recibo de Pago - ${nombre}`, content);
+    } catch (e) {
+      console.error('Error imprimiendo recibo:', e);
+      App.showNotification?.('Error al generar recibo', 'error');
+    }
   };
 
   // ========== LIQUIDACIÓN TAB ==========
@@ -697,6 +951,7 @@ const PrestacionesModule = (() => {
                   <option value="Mensual" ${(emp?.tipoSalario || emp?.tipo_salario) === 'Mensual' ? 'selected' : ''}>Mensual</option>
                   <option value="Quincenal" ${(emp?.tipoSalario || emp?.tipo_salario) === 'Quincenal' ? 'selected' : ''}>Quincenal</option>
                   <option value="Por Hora" ${(emp?.tipoSalario || emp?.tipo_salario) === 'Por Hora' ? 'selected' : ''}>Por Hora</option>
+                  <option value="Por Proyecto" ${(emp?.tipoSalario || emp?.tipo_salario) === 'Por Proyecto' ? 'selected' : ''}>Por Proyecto</option>
                 </select>
               </div>
               <div class="form-group">
@@ -819,9 +1074,19 @@ const PrestacionesModule = (() => {
 
                         <h4 style="margin-top: var(--spacing-md); margin-bottom: var(--spacing-sm); color: var(--text-secondary);">Prestaciones</h4>
                         <div class="detail-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-sm);">
-                          <p><strong>Vacaciones Tomadas:</strong> ${vacTomadas} días</p>
+                          <p>
+                            <strong>Vacaciones Tomadas:</strong> ${vacTomadas} días 
+                            <button class="btn btn--ghost btn--xs btn--icon" onclick="PrestacionesModule.verHistorialVacaciones('${emp.id}')" title="Ver Historial">${Icons.clock || '⏱️'}</button>
+                          </p>
                           <p><strong>Vacaciones Disponibles:</strong> ${vacData.diasDisponibles} días</p>
-                          <p><strong>Aguinaldo Pagado:</strong> ${(emp.aguinaldoPagado || emp.aguinaldo_pagado) ? 'Sí' : 'No'}</p>
+                          <p>
+                            <strong>Aguinaldo Pagado:</strong> ${(emp.aguinaldoPagado || emp.aguinaldo_pagado) ? 'Sí' : 'No'}
+                            <button class="btn btn--ghost btn--xs btn--icon" onclick="PrestacionesModule.verHistorialAguinaldos('${emp.id}')" title="Ver Historial">${Icons.clock || '⏱️'}</button>
+                          </p>
+                          <p>
+                             <strong>Nóminas:</strong> 
+                             <button class="btn btn--ghost btn--xs" onclick="PrestacionesModule.verHistorialNominas('${emp.id}')">Ver Recibos</button>
+                          </p>
                         </div>
                     </div>
                     <div class="modal__footer" style="margin: calc(-1 * var(--spacing-lg)); margin-top: var(--spacing-lg); padding: var(--spacing-lg); border-top: 1px solid var(--border-color);">
@@ -834,58 +1099,85 @@ const PrestacionesModule = (() => {
     document.getElementById('prestacionesModal').innerHTML = contenido;
   };
 
+
   const editEmpleado = (id) => {
     openEmpleadoModal(id);
   };
 
   // --- Vacaciones ---
+  const calcularDiasEntreFechas = (fechaInicio, fechaFin) => {
+    if (!fechaInicio || !fechaFin) return 0;
+    const inicio = new Date(fechaInicio);
+    const fin = new Date(fechaFin);
+    if (fin < inicio) return 0;
+    const diffMs = fin - inicio;
+    return Math.ceil(diffMs / (1000 * 60 * 60 * 24)) + 1; // +1 incluye ambos días
+  };
+
   const registrarVacaciones = (preSelectedId = null) => {
     const empleados = DataService.getEmpleadosSync();
     document.getElementById('prestacionesModal').innerHTML = `
             <div class="modal-overlay open" onclick="PrestacionesModule.closeModal(event)">
                 <div class="modal" onclick="event.stopPropagation()">
                     <div class="modal__header">
-                        <h3 class="modal__title">Registrar Vacaciones</h3>
+                        <h3 class="modal__title">${Icons.calendar} Registrar Vacaciones</h3>
                         <button class="btn btn--ghost btn--icon" onclick="PrestacionesModule.closeModal()">${Icons.x}</button>
                     </div>
                     <form class="modal__body" onsubmit="PrestacionesModule.saveVacaciones(event)">
                         <div class="form-group">
-                            <label class="form-label">Empleado</label>
-                                ${empleados.map(e => `<option value="${e.id}" ${e.id == preSelectedId ? 'selected' : ''}>${e.nombre}</option>`).join('')}
+                            <label class="form-label form-label--required">Empleado</label>
+                            <select name="empleadoId" class="form-select" required>
+                                <option value="">Seleccionar empleado...</option>
+                                ${empleados.map(e => `<option value="${e.id}" ${e.id === preSelectedId ? 'selected' : ''}>${e.nombre}</option>`).join('')}
                             </select>
                         </div>
                         <div class="form-row">
                              <div class="form-group">
-                                <label class="form-label">Desde</label>
-                                <input type="date" name="fechaInicio" class="form-input" required>
+                                <label class="form-label form-label--required">Desde</label>
+                                <input type="date" name="fechaInicio" class="form-input" required onchange="PrestacionesModule.onVacacionFechaChange()">
                             </div>
                             <div class="form-group">
-                                <label class="form-label">Hasta</label>
-                                <input type="date" name="fechaFin" class="form-input" required>
+                                <label class="form-label form-label--required">Hasta</label>
+                                <input type="date" name="fechaFin" class="form-input" required onchange="PrestacionesModule.onVacacionFechaChange()">
                             </div>
                         </div>
-                        <div class="form-group">
-                            <label class="form-label">Días a descontar</label>
-                            <input type="number" name="dias" class="form-input" min="0.5" step="0.5" required>
+                        <div class="info-card info-card--info" id="diasCalculadosInfo" style="display:none; margin-bottom: var(--spacing-md);">
+                            <strong>Días a descontar:</strong> <span id="diasCalculadosValor">0</span> día(s)
                         </div>
                         <div class="form-group">
                             <label class="form-label">Observaciones</label>
                             <textarea name="observaciones" class="form-textarea"></textarea>
                         </div>
-                        <button type="submit" class="btn btn--primary" style="margin-top: 1rem;">Registrar</button>
+                        <button type="submit" class="btn btn--primary" style="margin-top: 1rem;">${Icons.save || '💾'} Registrar</button>
                     </form>
                 </div>
             </div>
         `;
   };
 
+  const onVacacionFechaChange = () => {
+    const fechaInicio = document.querySelector('input[name="fechaInicio"]')?.value;
+    const fechaFin = document.querySelector('input[name="fechaFin"]')?.value;
+    const infoEl = document.getElementById('diasCalculadosInfo');
+    const valorEl = document.getElementById('diasCalculadosValor');
+    if (fechaInicio && fechaFin && infoEl && valorEl) {
+      const dias = calcularDiasEntreFechas(fechaInicio, fechaFin);
+      valorEl.textContent = dias;
+      infoEl.style.display = dias > 0 ? 'block' : 'none';
+    }
+  };
+
   const saveVacaciones = async (event) => {
     event.preventDefault();
     const fd = new FormData(event.target);
     const data = Object.fromEntries(fd.entries());
-    data.dias = parseFloat(data.dias);
-    data.fechaInicio = data.fechaInicio;
-    data.fechaFin = data.fechaFin;
+
+    // Auto-calcular días desde fechas
+    data.dias = calcularDiasEntreFechas(data.fechaInicio, data.fechaFin);
+    if (data.dias <= 0) {
+      App.showNotification?.('Las fechas son inválidas', 'error') || alert('Las fechas son inválidas');
+      return;
+    }
     data.anioCorrespondiente = new Date().getFullYear();
 
     try {
@@ -912,7 +1204,7 @@ const PrestacionesModule = (() => {
                             <button class="btn btn--ghost btn--icon" onclick="PrestacionesModule.closeModal()">${Icons.x}</button>
                         </div>
                         <div class="modal__body">
-                            <table class="table">
+                            <table class="data-table">
                                 <thead><tr><th>Inicio</th><th>Fin</th><th>Días</th><th>Obs</th><th>Acción</th></tr></thead>
                                 <tbody>
                                     ${historial.length ? historial.map(h => `
@@ -948,6 +1240,112 @@ const PrestacionesModule = (() => {
       App.refreshCurrentModule();
     } catch (e) {
       console.error('Error eliminando vacación:', e);
+      App.showNotification?.('Error: ' + e.message, 'error') || alert('Error: ' + e.message);
+    }
+  };
+
+  // --- Ausencias ---
+  const registrarAusencia = (preSelectedId = null) => {
+    const empleados = DataService.getEmpleadosSync();
+    document.getElementById('prestacionesModal').innerHTML = `
+      <div class="modal-overlay open" onclick="PrestacionesModule.closeModal(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+          <div class="modal__header">
+            <h3 class="modal__title">${Icons.clock || '🕐'} Registrar Ausencia</h3>
+            <button class="btn btn--ghost btn--icon" onclick="PrestacionesModule.closeModal()">${Icons.x}</button>
+          </div>
+          <form class="modal__body" onsubmit="PrestacionesModule.saveAusencia(event)">
+            <div class="form-group">
+              <label class="form-label form-label--required">Empleado</label>
+              <select name="empleadoId" class="form-select" required>
+                <option value="">Seleccionar empleado...</option>
+                ${empleados.map(e => `<option value="${e.id}" ${e.id === preSelectedId ? 'selected' : ''}>${e.nombre}</option>`).join('')}
+              </select>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label form-label--required">Desde</label>
+                <input type="date" name="fechaInicio" class="form-input" required onchange="PrestacionesModule.onAusenciaFechaChange()">
+              </div>
+              <div class="form-group">
+                <label class="form-label form-label--required">Hasta</label>
+                <input type="date" name="fechaFin" class="form-input" required onchange="PrestacionesModule.onAusenciaFechaChange()">
+              </div>
+            </div>
+            <div class="info-card info-card--info" id="ausenciaDiasInfo" style="display:none; margin-bottom: var(--spacing-md);">
+              <strong>Días de ausencia:</strong> <span id="ausenciaDiasValor">0</span> día(s)
+            </div>
+            <div class="form-group">
+              <label class="form-label form-label--required">¿De dónde se descuenta?</label>
+              <div style="display: flex; gap: var(--spacing-md); margin-top: var(--spacing-sm);">
+                <label style="display: flex; align-items: center; gap: var(--spacing-xs); cursor: pointer; padding: var(--spacing-sm) var(--spacing-md); border: 2px solid var(--border-color); border-radius: var(--radius-md); flex: 1; transition: all 0.2s;">
+                  <input type="radio" name="tipoDescuento" value="vacaciones" required>
+                  <span>${Icons.calendar} <strong>Vacaciones</strong></span>
+                </label>
+                <label style="display: flex; align-items: center; gap: var(--spacing-xs); cursor: pointer; padding: var(--spacing-sm) var(--spacing-md); border: 2px solid var(--border-color); border-radius: var(--radius-md); flex: 1; transition: all 0.2s;">
+                  <input type="radio" name="tipoDescuento" value="dia_laboral">
+                  <span>${Icons.clock || '🕐'} <strong>Día Laboral</strong></span>
+                </label>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Motivo</label>
+              <input type="text" name="motivo" class="form-input" placeholder="Ej: Cita médica, permiso personal...">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Observaciones</label>
+              <textarea name="observaciones" class="form-textarea" rows="2"></textarea>
+            </div>
+            <button type="submit" class="btn btn--primary" style="margin-top: 1rem;">${Icons.save || '💾'} Registrar Ausencia</button>
+          </form>
+        </div>
+      </div>
+    `;
+  };
+
+  const onAusenciaFechaChange = () => {
+    const fechaInicio = document.querySelector('input[name="fechaInicio"]')?.value;
+    const fechaFin = document.querySelector('input[name="fechaFin"]')?.value;
+    const infoEl = document.getElementById('ausenciaDiasInfo');
+    const valorEl = document.getElementById('ausenciaDiasValor');
+    if (fechaInicio && fechaFin && infoEl && valorEl) {
+      const dias = calcularDiasEntreFechas(fechaInicio, fechaFin);
+      valorEl.textContent = dias;
+      infoEl.style.display = dias > 0 ? 'block' : 'none';
+    }
+  };
+
+  const saveAusencia = async (event) => {
+    event.preventDefault();
+    const fd = new FormData(event.target);
+    const data = Object.fromEntries(fd.entries());
+
+    data.dias = calcularDiasEntreFechas(data.fechaInicio, data.fechaFin);
+    if (data.dias <= 0) {
+      App.showNotification?.('Las fechas son inválidas', 'error') || alert('Las fechas son inválidas');
+      return;
+    }
+
+    try {
+      await DataService.createAusencia(data);
+      const tipoLabel = data.tipoDescuento === 'vacaciones' ? 'vacaciones' : 'día laboral';
+      App.showNotification?.(`Ausencia registrada (${data.dias} días descontados de ${tipoLabel})`, 'success');
+      closeModal();
+      App.refreshCurrentModule();
+    } catch (e) {
+      console.error('Error registrando ausencia:', e);
+      App.showNotification?.('Error: ' + e.message, 'error') || alert('Error: ' + e.message);
+    }
+  };
+
+  const deleteAusencia = async (id) => {
+    if (!confirm('¿Eliminar ausencia? Si fue descontada de vacaciones, se devolverán los días.')) return;
+    try {
+      await DataService.deleteAusencia(id);
+      App.showNotification?.('Ausencia eliminada', 'success');
+      App.refreshCurrentModule();
+    } catch (e) {
+      console.error('Error eliminando ausencia:', e);
       App.showNotification?.('Error: ' + e.message, 'error') || alert('Error: ' + e.message);
     }
   };
@@ -989,7 +1387,7 @@ const PrestacionesModule = (() => {
         </tbody>
       </table>
     `;
-    printDocument(`Planilla de Aguinaldo ${new Date().getFullYear()}`, content);
+    printDocument(`Planilla de Aguinaldo ${new Date().getFullYear()}`, content, 'landscape');
   };
 
   const marcarAguinaldoPagado = async (empleadoId) => {
@@ -1030,7 +1428,7 @@ const PrestacionesModule = (() => {
               <button class="btn btn--ghost btn--icon" onclick="PrestacionesModule.closeModal()">${Icons.x}</button>
             </div>
             <div class="modal__body">
-               <table class="table">
+               <table class="data-table">
                  <thead><tr><th>Año</th><th>Fecha Pago</th><th>Monto</th></tr></thead>
                  <tbody>
                    ${historial && historial.length ? historial.map(h => `
@@ -1062,11 +1460,31 @@ const PrestacionesModule = (() => {
     const fd = new FormData(event.target);
     const periodo = fd.get('periodo'); // quincenal, mensual
     const mes = fd.get('mes');
+    const quincena = fd.get('quincena'); // 1, 2
     const empleadosSel = fd.getAll('empleados');
 
     let empleados = DataService.getEmpleadosSync().filter(e => e.estado === 'Activo');
     if (empleadosSel.length > 0) {
       empleados = empleados.filter(e => empleadosSel.includes(e.id));
+    }
+
+    // Calcular fechas
+    let fechaInicio, fechaFin;
+    const year = parseInt(mes.split('-')[0]);
+    const month = parseInt(mes.split('-')[1]) - 1; // 0-indexed
+    const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+
+    if (periodo === 'quincenal') {
+      if (quincena === '1') {
+        fechaInicio = `${mes}-01`;
+        fechaFin = `${mes}-15`;
+      } else {
+        fechaInicio = `${mes}-16`;
+        fechaFin = `${mes}-${lastDayOfMonth}`;
+      }
+    } else {
+      fechaInicio = `${mes}-01`;
+      fechaFin = `${mes}-${lastDayOfMonth}`;
     }
 
     // Iterar y generar
@@ -1085,15 +1503,15 @@ const PrestacionesModule = (() => {
       try {
         await DataService.createNomina({
           empleadoId: e.id,
-          periodoInicio: `${mes}-01`, // Simplificado
-          periodoFin: `${mes}-15`, // Simplificado
-          tipoPeriodo: periodo,
+          periodoInicio: fechaInicio,
+          periodoFin: fechaFin,
+          tipoPeriodo: periodo === 'quincenal' ? 'Quincenal' : 'Mensual',
           salarioBase: salarioBase,
           deduccionInss: inss,
           deduccionIr: ir,
           totalNeto: totalNeto,
           estado: 'Pagado',
-          notas: `Generado automáticamente para ${periodo} de ${mes}`
+          notas: `Generado automáticamente para ${periodo} ${periodo === 'quincenal' ? (quincena === '1' ? '(1ra)' : '(2da)') : ''} de ${mes}`
         });
         count++;
       } catch (err) {
@@ -1103,6 +1521,48 @@ const PrestacionesModule = (() => {
 
     App.showNotification?.(`Se han generado ${count} recibos de pago`, 'success') || alert(`Se han generado ${count} recibos de pago.`);
     App.refreshCurrentModule();
+  };
+
+  const verHistorialNominas = async (empleadoId) => {
+    try {
+      const historial = await DataService.getNominasByEmpleado(empleadoId);
+      const emp = DataService.getEmpleadoById(empleadoId);
+
+      const content = `
+        <div class="modal-overlay open" onclick="PrestacionesModule.closeModal(event)">
+          <div class="modal modal--large" onclick="event.stopPropagation()">
+            <div class="modal__header">
+              <h3 class="modal__title">Historial Nóminas: ${emp?.nombre || ''}</h3>
+              <button class="btn btn--ghost btn--icon" onclick="PrestacionesModule.closeModal()">${Icons.x}</button>
+            </div>
+            <div class="modal__body">
+               <div class="table-container">
+               <table class="data-table">
+                 <thead><tr><th>Período</th><th>Tipo</th><th>Neto</th><th>Estado</th></tr></thead>
+                 <tbody>
+                   ${historial && historial.length ? historial.map(h => `
+                     <tr>
+                       <td>${new Date(h.periodo_inicio).toLocaleDateString()} - ${new Date(h.periodo_fin).toLocaleDateString()}</td>
+                       <td>${h.tipo_periodo}</td>
+                       <td class="text-right">C$${(h.total_neto || 0).toLocaleString()}</td>
+                       <td><span class="badge ${h.estado === 'Pagado' ? 'badge--success' : 'badge--warning'}">${h.estado}</span></td>
+                     </tr>
+                   `).join('') : '<tr><td colspan="4" class="text-center">No hay registros de nómina</td></tr>'}
+                 </tbody>
+               </table>
+               </div>
+               <div class="modal__footer" style="padding-top: var(--spacing-md);">
+                 <button class="btn btn--secondary" onclick="PrestacionesModule.closeModal()">Cerrar</button>
+               </div>
+            </div>
+          </div>
+        </div>
+      `;
+      document.getElementById('prestacionesModal').innerHTML = content;
+    } catch (e) {
+      console.error(e);
+      App.showNotification?.('Error cargando historial de nóminas', 'error');
+    }
   };
 
   // --- Liquidación ---
@@ -1200,31 +1660,96 @@ const PrestacionesModule = (() => {
     const total = montoVacaciones + montoAguinaldo + indemnizacion;
 
     const resultDiv = document.getElementById('liquidacionResult');
+    const printContent = `
+      <div style="padding: 20px; border: 1px solid #eee; border-radius: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: start; border-bottom: 2px solid #1a73e8; padding-bottom: 15px; margin-bottom: 20px;">
+          <div>
+            <h2 style="margin: 0; color: #1a73e8;">LIQUIDACIÓN LABORAL</h2>
+            <p style="margin: 5px 0; font-weight: bold;">ALLTECH SUPPORT</p>
+          </div>
+          <div style="text-align: right; font-size: 12px; color: #666;">
+            <p style="margin: 0;">Fecha: ${new Date().toLocaleDateString('es-NI')}</p>
+          </div>
+        </div>
+
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 25px;">
+          <h4 style="margin: 0 0 10px 0; color: #1a73e8;">DATOS DEL EMPLEADO</h4>
+          <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+            <tr><td style="width: 30%; padding: 4px 0;"><strong>Nombre:</strong></td><td>${emp.nombre}</td></tr>
+            <tr><td style="padding: 4px 0;"><strong>Cédula:</strong></td><td>${emp.cedula}</td></tr>
+            <tr><td style="padding: 4px 0;"><strong>Cargo:</strong></td><td>${emp.cargo}</td></tr>
+            <tr><td style="padding: 4px 0;"><strong>Fecha Ingreso:</strong></td><td>${new Date(emp.fechaAlta).toLocaleDateString()}</td></tr>
+            <tr><td style="padding: 4px 0;"><strong>Fecha Salida:</strong></td><td>${fechaSalida.toLocaleDateString()}</td></tr>
+            <tr><td style="padding: 4px 0;"><strong>Antigüedad:</strong></td><td>${antiguedadExacta.toFixed(2)} años Laborados</td></tr>
+            <tr><td style="padding: 4px 0;"><strong>Motivo:</strong></td><td style="text-transform: capitalize;">${motivo.replace(/_/g, ' ')}</td></tr>
+          </table>
+        </div>
+
+        <h4 style="color: #1a73e8; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 15px;">CONCEPTOS A PAGAR</h4>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 14px;">
+          <thead>
+            <tr style="background: #eee;">
+              <th style="padding: 10px; text-align: left;">Descripción</th>
+              <th style="padding: 10px; text-align: right;">Cálculo / Cantidad</th>
+              <th style="padding: 10px; text-align: right;">Total Cordobas</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="padding: 10px; border-bottom: 1px solid #eee;">Vacaciones Pendientes</td>
+              <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${diasVacaciones.toFixed(2)} días</td>
+              <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">C$ ${montoVacaciones.toLocaleString('es-NI', { minimumFractionDigits: 2 })}</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px; border-bottom: 1px solid #eee;">Aguinaldo Proporcional</td>
+              <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${mesesAguinaldo.toFixed(2)} meses</td>
+              <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">C$ ${montoAguinaldo.toLocaleString('es-NI', { minimumFractionDigits: 2 })}</td>
+            </tr>
+            ${indemnizacion > 0 ? `
+            <tr>
+              <td style="padding: 10px; border-bottom: 1px solid #eee;">Indemnización (Art. 45)</td>
+              <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${aniosAntiguedad.toFixed(2)} años</td>
+              <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">C$ ${indemnizacion.toLocaleString('es-NI', { minimumFractionDigits: 2 })}</td>
+            </tr>
+            ` : ''}
+            <tr style="background: #1a73e8; color: white;">
+              <td colspan="2" style="padding: 12px 10px; font-weight: bold; border-radius: 4px 0 0 4px;">TOTAL NETO A RECIBIR</td>
+              <td style="padding: 12px 10px; text-align: right; font-weight: bold; font-size: 18px; border-radius: 0 4px 4px 0;">C$ ${total.toLocaleString('es-NI', { minimumFractionDigits: 2 })}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div style="margin-top: 60px; display: flex; justify-content: space-between; gap: 40px;">
+          <div style="flex: 1; text-align: center;">
+            <div style="border-top: 1px solid #333; padding-top: 8px; font-size: 11px;">
+              <strong>${emp.nombre}</strong><br>
+              Firma del Trabajador
+            </div>
+          </div>
+          <div style="flex: 1; text-align: center;">
+            <div style="border-top: 1px solid #333; padding-top: 8px; font-size: 11px;">
+              <strong>ALLTECH SUPPORT</strong><br>
+              Firma y Sello del Empleador
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 40px; padding: 15px; background: #fffde7; border-radius: 6px; font-size: 10px; color: #5d4037; border-left: 4px solid #fbc02d;">
+          <strong>Nota Legal:</strong> El presente cálculo es de carácter informativo y constituye una propuesta de liquidación conforme a la legislación laboral vigente de la República de Nicaragua. Al recibir este pago, el trabajador se declara a satisfacción y otorga el más amplio finiquito que en derecho corresponda.
+        </div>
+      </div>
+    `;
+
     resultDiv.innerHTML = `
-            <div class="card" style="margin-top: 1rem; border: 1px solid var(--primary-color);">
+            <div class="card" style="margin-top: 1rem; border: 1px solid var(--color-primary-500);">
                 <div class="card__header">
-                    <h3 class="card__title">Resultado Liquidación (Estimado)</h3>
-                    <button class="btn btn--ghost btn--sm" onclick="PrestacionesModule.printDocument('Liquidación Laboral', document.getElementById('liquidacionTabla').outerHTML)">Imprimir</button>
+                    <h3 class="card__title">${Icons.fileText} Resultado Liquidación (Estimado)</h3>
+                    <button class="btn btn--primary btn--sm" onclick="PrestacionesModule.printDocument('Liquidación Laboral - ${emp.nombre}', document.getElementById('liquidacionTabla').innerHTML)">
+                         ${Icons.printer} Imprimir Liquidación
+                    </button>
                 </div>
                 <div class="card__body" id="liquidacionTabla">
-                    <div style="margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px;">
-                        <h4 style="margin:0;">${emp.nombre}</h4>
-                        <p style="margin:5px 0; font-size: 0.9em; color: #666;">
-                            Fecha Ingreso: ${new Date(emp.fechaAlta).toLocaleDateString()} <br>
-                            Fecha Salida: ${fechaSalida.toLocaleDateString()} <br>
-                            Antigüedad: ${antiguedadExacta.toFixed(2)} años
-                        </p>
-                    </div>
-                    <table class="table">
-                        <tr><td>Vacaciones Pendientes (${diasVacaciones.toFixed(2)} días)</td><td class="text-right">C$${montoVacaciones.toFixed(2)}</td></tr>
-                        <tr><td>Aguinaldo Proporcional (${mesesAguinaldo.toFixed(2)} meses)</td><td class="text-right">C$${montoAguinaldo.toFixed(2)}</td></tr>
-                        <tr><td>Indemnización (${aniosAntiguedad.toFixed(2)} años)</td><td class="text-right">C$${indemnizacion.toFixed(2)}</td></tr>
-                        <tr style="font-weight: bold; font-size: 1.1em; border-top: 2px solid #ccc;"><td>TOTAL A PAGAR</td><td class="text-right">C$${total.toFixed(2)}</td></tr>
-                    </table>
-                    <p style="font-size: 0.8em; color: #777; margin-top: 10px;">
-                        * Cálculo estimado conforme a Art. 45 y 76 del Código del Trabajo. <br>
-                        * Verificar deducciones de IR o INSS sobre vacaciones indemnizadas si aplica.
-                    </p>
+                    ${printContent}
                 </div>
             </div>
         `;
@@ -1232,7 +1757,7 @@ const PrestacionesModule = (() => {
 
   // --- Reportes ---
   // --- Reportes Helpers ---
-  const printDocument = (title, content) => {
+  const printDocument = (title, content, orientation = 'portrait') => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) { alert('Por favor habilite las ventanas emergentes para imprimir el reporte.'); return; }
 
@@ -1242,40 +1767,56 @@ const PrestacionesModule = (() => {
         <head>
           <title>${title} - ALLTECH SUPPORT</title>
           <style>
-            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 0; margin: 0; color: #333; }
-            .container { padding: 40px; max-width: 1000px; margin: 0 auto; }
-            h1 { text-align: center; color: #1a73e8; margin-bottom: 10px; font-size: 24px; text-transform: uppercase; }
-            p.subtitle { text-align: center; color: #666; margin-bottom: 30px; font-size: 14px; }
-            table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px; }
-            th, td { border: 1px solid #ddd; padding: 10px 8px; text-align: left; }
-            th { background-color: #f1f3f4; font-weight: bold; color: #202124; text-transform: uppercase; font-size: 11px; }
-            tr:nth-child(even) { background-color: #f8f9fa; }
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+            
+            body { font-family: 'Inter', system-ui, -apple-system, sans-serif; padding: 0; margin: 0; color: #1a1f36; background: white; }
+            .container { padding: 30px; max-width: 900px; margin: 0 auto; }
+            
+            .print-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 30px; border-bottom: 2px solid #f1f3f9; padding-bottom: 15px; }
+            .print-header h1 { margin: 0; font-size: 20px; color: #1a73e8; text-transform: uppercase; letter-spacing: 0.5px; }
+            .print-header p { margin: 5px 0 0; font-size: 12px; color: #697386; }
+            
+            table { width: 100%; border-collapse: collapse; margin-bottom: 25px; font-size: 12px; }
+            th { background-color: #f7f9fc; color: #4f566b; font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; padding: 12px 10px; border: 1px solid #e3e8ee; text-align: left; }
+            td { padding: 10px; border: 1px solid #e3e8ee; color: #3c4257; }
+            tr:nth-child(even) { background-color: #fcfdfe; }
+            
             .text-right { text-align: right; }
             .text-center { text-align: center; }
-            .total-row { font-weight: bold; background-color: #e8f0fe !important; }
-            .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; color: white; background-color: #666; }
-            .badge--success { background-color: #28a745; }
-            .badge--warning { background-color: #ffc107; color: #333; }
-            .footer { margin-top: 50px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 10px; text-align: center; color: #999; }
+            .font-bold { font-weight: 700; }
+            
+            .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e3e8ee; font-size: 10px; text-align: center; color: #697386; }
+            
             @media print {
-              @page { margin: 1cm; size: landscape; }
-              body { -webkit-print-color-adjust: exact; }
+              @page { size: ${orientation}; margin: 15mm; }
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              .no-print { display: none !important; }
+              .container { padding: 0; }
             }
           </style>
         </head>
         <body>
           <div class="container">
-            <div class="header">
-              <h1>${title}</h1>
-              <p class="subtitle">Generado: ${new Date().toLocaleString('es-NI')}</p>
+            <div class="print-header">
+              <div>
+                <h1>${title}</h1>
+                <p>Generado: ${new Date().toLocaleString('es-NI')}</p>
+              </div>
+              <div style="text-align: right;">
+                <p style="font-weight: bold; color: #1a1f36;">ALLTECH SUPPORT</p>
+                <p>Soporte Técnico & Sistemas</p>
+              </div>
             </div>
             ${content}
             <div class="footer">
-              Generado por Sistema ALLTECH SUPPORT - Uso Interno Confidencial
+              Este documento fue generado electrónicamente por el sistema ALLTECH SUPPORT.
             </div>
           </div>
           <script>
-            setTimeout(() => { window.print(); }, 500);
+            setTimeout(() => { 
+                window.print(); 
+                // window.close(); // Opcional: cerrar después de imprimir
+            }, 500);
           </script>
         </body>
       </html>
@@ -1314,7 +1855,7 @@ const PrestacionesModule = (() => {
         </tbody>
       </table>
     `;
-    printDocument('Reporte de Personal Activo', content);
+    printDocument('Reporte de Personal Activo', content, 'landscape');
   };
 
   const generarReporteVacaciones = () => {
@@ -1358,7 +1899,7 @@ const PrestacionesModule = (() => {
         </tbody>
       </table>
     `;
-    printDocument('Reporte de Estado de Vacaciones', content);
+    printDocument('Reporte de Estado de Vacaciones', content, 'landscape');
   };
 
   const generarPlanillaMensual = () => {
@@ -1416,7 +1957,7 @@ const PrestacionesModule = (() => {
         </tbody>
       </table>
     `;
-    printDocument('Planilla Mensual Proyectada', content);
+    printDocument('Planilla Mensual Proyectada', content, 'landscape');
   };
 
   const generarReporteCostos = () => {
@@ -1482,7 +2023,7 @@ const PrestacionesModule = (() => {
       </table>
       <p style="margin-top: 20px; font-size: 11px; color: #666;">Nota: INSS Patronal calculado al 21.5% (Régimen < 50 empleados). INATEC 2%. Provisiones de Ley incluyen doceava parte de Vacaciones y Aguinaldo.</p>
     `;
-    printDocument('Reporte de Costos Laborales', content);
+    printDocument('Reporte de Costos Laborales', content, 'landscape');
   };
 
 
@@ -1491,6 +2032,10 @@ const PrestacionesModule = (() => {
   const changeTab = (tab) => {
     currentTab = tab;
     App.refreshCurrentModule();
+    // Cargar datos async según la pestaña
+    if (tab === 'recibos') {
+      setTimeout(() => loadHistorialRecibos(), 150);
+    }
   };
 
   const handleSearch = (value) => {
@@ -1525,18 +2070,31 @@ const PrestacionesModule = (() => {
     deleteEmpleado,
     registrarVacaciones,
     saveVacaciones,
+    onVacacionFechaChange,
     verHistorialVacaciones,
     deleteVacacion,
+    // Ausencias
+    registrarAusencia,
+    onAusenciaFechaChange,
+    saveAusencia,
+    deleteAusencia,
+    // Aguinaldo
     generarAguinaldoReporte,
     marcarAguinaldoPagado,
     verHistorialAguinaldos,
+    // Recibos
     generarRecibos,
+    verHistorialNominas,
+    imprimirRecibo,
+    // Liquidación
     calcularLiquidacion,
     loadEmpleadoData,
+    // Reportes
     generarReporteEmpleados,
     generarReporteVacaciones,
     generarPlanillaMensual,
     generarReporteCostos,
+    // Utils
     closeModal,
     printDocument
   };

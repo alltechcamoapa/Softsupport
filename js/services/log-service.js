@@ -41,7 +41,7 @@ const LogService = (() => {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
 
             // Log en consola en desarrollo
-            console.log(`[LOG] ${accion.toUpperCase()} en ${modulo}:`, newLog);
+            // console.log(`[LOG] ${accion.toUpperCase()} en ${modulo}:`, newLog);
 
             return newLog;
         } catch (error) {
